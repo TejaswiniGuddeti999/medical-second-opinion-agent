@@ -1,0 +1,37 @@
+# LLM + Agents
+openai==1.30.1
+langgraph==0.1.9
+langchain==0.2.1
+langchain-openai==0.1.7
+
+# API framework
+fastapi==0.111.0
+uvicorn[standard]==0.29.0
+python-multipart==0.0.9        # needed for file uploads in FastAPI
+
+# Data validation (Pydantic v2 — industry standard now)
+pydantic==2.7.1
+pydantic-settings==2.2.1       # for settings/config management
+
+# Database
+sqlalchemy==2.0.30             # SQLAlchemy 2.0 is async-native, 1.x is outdated
+alembic==1.13.1                # database migrations
+asyncpg==0.29.0                # async PostgreSQL driver
+psycopg2-binary==2.9.9         # sync driver (needed by Alembic)
+
+# PDF parsing
+pymupdf==1.24.3                # fastest and most reliable PDF parser
+
+# HTTP client
+httpx==0.27.0                  # async HTTP — used for PubMed + OpenFDA API calls
+
+# Observability (this is what separates juniors from seniors)
+langsmith==0.1.63              # traces every LLM call 
+
+# Frontend
+streamlit==1.35.0
+
+# Utilities
+python-dotenv==1.0.1
+tenacity==8.3.0                # retry logic for API calls — production must-have
+structlog==24.1.0              # structured logging (JSON logs, not print statements)
