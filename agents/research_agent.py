@@ -1,48 +1,55 @@
-import httpx          # like requests, but async — can do multiple API calls simultaneously
-from tenacity import retry, stop_after_attempt, wait_exponential  # retry logic
-from app.config import get_settings    # your .env values, loaded once
-from app.schemas import (ResearchAgentOutput,
-                        PubMedArticle,
-                        EvidenceQuality,)            # the Pydantic models you wrote yesterday
-from app.logger import get_logger      # structured logging, not print()
-from openai import AsyncOpenAI         # async OpenAI client
-
+import httpx
+import json
+import asyncio
+from tenacity import retry, stop_after_attempt, wait_exponential
+from app.config import get_settings
+from app.schemas import (
+    ResearchAgentOutput,
+    PubMedArticle,
+    EvidenceQuality,
+)
+from app.logger import get_logger
+from openai import AsyncOpenAI
 
 logger = get_logger(__name__)
-settings=get_settings()
+settings = get_settings()
 client = AsyncOpenAI(api_key=settings.openai_api_key)
 
 
-#PubMed API calls
-@retry(stop=stop_after_attempt(3), wait = wait_exponential(min=1, max=10))
-async def search_pubmed(query: str, max_results: int= 5) -> list[str]:
+# ── PubMed API calls ───────────────────────────────────────────────────────────
+
+@retry(stop=stop_after_attempt(3), wait=wait_exponential(min=1, max=10))
+async def search_pubmed(query: str, max_results: int = 5) -> list[str]:
     """Search PubMed and return a list of PMIDs."""
     async with httpx.AsyncClient() as http:
         response = await http.get(
             f"{settings.ncbi_base_url}/esearch.fcgi",
-            params = {
-                "db":"pubmed",
+            params={
+                "db": "pubmed",
                 "term": query,
                 "retmax": max_results,
-                "retmode":"json",
+                "retmode": "json",
                 "api_key": settings.ncbi_api_key,
             },
-            timeout = 15.0
+            timeout=15.0,
         )
         response.raise_for_status()
         data = response.json()
         pmids = data["esearchresult"]["idlist"]
         logger.info("pubmed_search_complete", query=query, results_found=len(pmids))
         return pmids
-   
+
+
 @retry(stop=stop_after_attempt(3), wait=wait_exponential(min=2, max=15))
-async def fetch_pubmed_details(pmids: list[str]) -> list[dict]:
-    """Fetch article details for a list of PMIDs."""
+async def fetch_pubmed_metadata(pmids: list[str]) -> list[dict]:
+    """
+    Fetch article metadata (title, authors, journal, year) for a list of PMIDs.
+    Uses esummary endpoint — returns structured JSON.
+    """
     if not pmids:
         return []
 
-    import asyncio
-    await asyncio.sleep(1)  # PubMed needs a moment between esearch and esummary
+    await asyncio.sleep(1)
 
     async with httpx.AsyncClient() as http:
         response = await http.get(
@@ -57,10 +64,9 @@ async def fetch_pubmed_details(pmids: list[str]) -> list[dict]:
         )
         response.raise_for_status()
 
-        # Guard against empty response before parsing
         if not response.content or not response.text.strip():
-            logger.warning("pubmed_empty_response", pmids=pmids)
-            raise ValueError("PubMed returned empty response")
+            logger.warning("pubmed_metadata_empty", pmids=pmids)
+            raise ValueError("PubMed returned empty metadata response")
 
         data = response.json()
         articles = []
@@ -76,71 +82,152 @@ async def fetch_pubmed_details(pmids: list[str]) -> list[dict]:
                     ],
                     "journal": article.get("fulljournalname", ""),
                     "year": article.get("pubdate", "")[:4],
+                    "abstract": "",  # placeholder — filled by fetch_pubmed_abstracts
                 })
 
-        logger.info("pubmed_fetch_complete", articles_fetched=len(articles))
+        logger.info("pubmed_metadata_complete", articles_fetched=len(articles))
         return articles
 
-#LLM analysis
+
+@retry(stop=stop_after_attempt(3), wait=wait_exponential(min=2, max=15))
+async def fetch_pubmed_abstracts(pmids: list[str]) -> dict[str, str]:
+    """
+    Fetch actual abstract text for each PMID using PubMed's efetch endpoint.
+    Returns a dict of {pmid: abstract_text}.
+    This is real paper content — not LLM hallucination.
+    """
+    if not pmids:
+        return {}
+
+    await asyncio.sleep(1)
+
+    async with httpx.AsyncClient() as http:
+        response = await http.get(
+            f"{settings.ncbi_base_url}/efetch.fcgi",
+            params={
+                "db": "pubmed",
+                "id": ",".join(pmids),
+                "rettype": "abstract",
+                "retmode": "text",
+                "api_key": settings.ncbi_api_key,
+            },
+            timeout=20.0,
+        )
+        response.raise_for_status()
+
+        raw_text = response.text
+        if not raw_text.strip():
+            logger.warning("pubmed_abstracts_empty", pmids=pmids)
+            return {}
+
+        # PubMed returns all abstracts concatenated with PMID markers
+        abstracts = {}
+        current_pmid = None
+        current_lines = []
+
+        for line in raw_text.split('\n'):
+            for pmid in pmids:
+                if pmid in line:
+                    if current_pmid and current_lines:
+                        abstracts[current_pmid] = ' '.join(current_lines).strip()
+                    current_pmid = pmid
+                    current_lines = []
+                    break
+            else:
+                if current_pmid:
+                    current_lines.append(line.strip())
+
+        # Capture the last abstract
+        if current_pmid and current_lines:
+            abstracts[current_pmid] = ' '.join(current_lines).strip()
+
+        logger.info("abstracts_fetched", count=len(abstracts))
+        return abstracts
+
+
+async def fetch_pubmed_details(pmids: list[str]) -> list[dict]:
+    """
+    Orchestrates metadata + abstracts fetching in parallel.
+    No @retry here — each individual function handles its own retries.
+    """
+    if not pmids:
+        return []
+
+    # Fire both API calls simultaneously — asyncio.gather runs them in parallel
+    metadata, abstracts = await asyncio.gather(
+        fetch_pubmed_metadata(pmids),
+        fetch_pubmed_abstracts(pmids),
+    )
+
+    # Merge abstract text into each article dict
+    for article in metadata:
+        pmid = article["pmid"]
+        article["abstract"] = abstracts.get(pmid, "Abstract not available")
+
+    return metadata
+
+
+# ── LLM analysis ───────────────────────────────────────────────────────────────
+
 async def analyze_articles_with_llm(
-    case_summary : str,
+    case_summary: str,
     articles: list[dict],
 ) -> ResearchAgentOutput:
     """
-    send case +articles to GPT - 40.
-    The agent is prompted to take a STRONG position- not just summarize.
-    This is what creates the debate in the orchestrator.
+    Send case + real abstracts to GPT.
+    Agent is prompted to take a STRONG position — creates the debate.
     """
 
     articles_text = "\n\n".join([
-        f"PMID: {a['pmid']}\nTitle: {a['title']}\n"
-        f"Journal: {a['journal']}\nYear: {a['year']}\n"
-        f"Authors: {', '.join(a['authors'][:3])}"
+        f"PMID: {a['pmid']}\n"
+        f"Title: {a['title']}\n"
+        f"Journal: {a['journal']} ({a['year']})\n"
+        f"Abstract: {a['abstract'][:1000]}"
         for a in articles
     ])
 
-    prompt = f"""You are a ResearchAgent in a multi-agent medical secong opinion system.
+    prompt = f"""You are a ResearchAgent in a multi-agent medical second opinion system.
 Your role: find the strongest evidence-based position for this case.
 You MUST take a clear, assertive diagnostic position — not sit on the fence.
 Other agents will challenge you. State your position strongly so the debate is meaningful.
+Base your position ONLY on the abstracts provided below — do not use outside knowledge.
 
-PATIENT_CASE:
+PATIENT CASE:
 {case_summary}
 
 PUBMED ARTICLES FOUND:
 {articles_text}
 
-Respond in this Exact format:
+Respond in this EXACT JSON format:
 {{
-    "articles" :[
+  "articles": [
     {{
-     "pmid": "string",
+      "pmid": "string",
       "title": "string",
       "authors": ["string"],
       "journal": "string",
       "year": 2024,
       "relevance_summary": "why this article matters for THIS case specifically",
-      "evidence_quality": "strong|moderate|weak"  
+      "evidence_quality": "strong|moderate|weak"
     }}
-    ],
-    "research_summary": "2-3 sentence summary about what the liteature ssays about this case",
-    "recommended_workup": ["test1", "test2"],
-    "agent_position": "Your strong, assertive position on what this patient likely has and why the evidence supports it. Be specific. Take a stand."
+  ],
+  "research_summary": "2-3 sentence summary of what the literature says about this case",
+  "recommended_workup": ["test1", "test2"],
+  "agent_position": "Your strong, assertive position based strictly on the abstracts above. Be specific. Take a stand."
 }}
 
-Return only the Json. No preamle, no markdown fences."""
+Return ONLY the JSON. No preamble, no markdown fences."""
 
     response = await client.chat.completions.create(
         model=settings.openai_model,
         messages=[{"role": "user", "content": prompt}],
-        temperature=0.3,   # low temp = consistent, reliable medical reasoning
-        response_format={"type": "json_object"}, 
+        temperature=0.3,
+        response_format={"type": "json_object"},
     )
-    import json
+
     raw = response.choices[0].message.content
     data = json.loads(raw)
 
-    # Map raw dicts to typed Pydantic models
     articles_parsed = [
         PubMedArticle(
             pmid=a["pmid"],
@@ -153,6 +240,7 @@ Return only the Json. No preamle, no markdown fences."""
         )
         for a in data.get("articles", [])
     ]
+
     return ResearchAgentOutput(
         articles=articles_parsed,
         research_summary=data["research_summary"],
@@ -160,16 +248,16 @@ Return only the Json. No preamle, no markdown fences."""
         agent_position=data["agent_position"],
     )
 
-#main agent entry point
+
+# ── Main agent entry point ─────────────────────────────────────────────────────
 
 async def run_research_agent(case_summary: str) -> ResearchAgentOutput:
     """
-    Full pipeline: build query → search PubMed → fetch details → LLM analysis.
+    Full pipeline: build query → search PubMed → fetch metadata + abstracts → LLM analysis.
     This is what the orchestrator calls.
     """
     logger.info("research_agent_started")
 
-    # Build a focused search query from the case
     query_prompt = f"""Extract a focused PubMed search query (max 8 words) from this case.
 Return ONLY the search query, nothing else.
 
@@ -183,22 +271,10 @@ Case: {case_summary}"""
     search_query = query_response.choices[0].message.content.strip()
     logger.info("search_query_built", query=search_query)
 
-    # Search and fetch
     pmids = await search_pubmed(search_query)
     articles = await fetch_pubmed_details(pmids)
 
-    # LLM analysis with strong position
     result = await analyze_articles_with_llm(case_summary, articles)
     logger.info("research_agent_complete", position_length=len(result.agent_position))
 
     return result
-    
-
-
-
-
-
-
-
-
-

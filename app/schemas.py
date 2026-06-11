@@ -81,7 +81,7 @@ class DrugInteraction(BaseModel):
 
 class SafetyAgentOutput(BaseModel):
     interactions_found: list[DrugInteraction] = []
-    contradictions: list[str] =[]
+    contraindications: list[str] =[]
     safety_summary: str
     is_safe_to_proceed: bool
     agent_position: str = Field(
@@ -99,13 +99,9 @@ class DiagnosisCandidate(BaseModel):
 
 class DiagnosisAgentOutput(BaseModel):
     primary_diagnosis: DiagnosisCandidate
-    differential_diagnosis: list[DiagnosisCandidate]
+    differential_diagnoses: list[DiagnosisCandidate]  # plural
     reasoning: str
-    agent_position: str = Field(
-        ...,
-        description = "The agent's strong diagnostic position it will defend"
-
-    )
+    agent_position: str
 
 # Synthesis (final report)
 
@@ -119,34 +115,24 @@ class AgentDisagreement(BaseModel):
     resolution_confidence: ConfidenceLevel
 
 class FinalReport(BaseModel):
-    """The structured second opinion returned to the doctor."""
-
-    #core findings
-    prmary_diagnosis: str
-    confidence: float = Field(..., ge = 0.0, le = 1.0)
+    primary_diagnosis: str                    # ← correct spelling
+    confidence: float = Field(..., ge=0.0, le=1.0)
     confidence_level: ConfidenceLevel
-
-    #what each agent foud
     research_output: ResearchAgentOutput
     safety_output: SafetyAgentOutput
     diagnosis_output: DiagnosisAgentOutput
-
-    # The debate
     disagreements: list[AgentDisagreement] = []
-    consensus_points: list[str] =[]
-
-    #Recommendations
+    consensus_points: list[str] = []
     immediate_actions: list[str]
     further_investigations: list[str]
-    red_flags: list[str] =[]
-
-    #Meta
+    red_flags: list[str] = []
     cited_sources: list[str] = []
     disclaimer: str = (
-        "This is an AI generated second opinion for informational purposes only."
-        "A licensed physician must take all clinical decisions."
+        "This is an AI-generated second opinion for informational purposes only. "
+        "A licensed physician must make all clinical decisions."
     )
-    generated_at: datetime = Field(default_factory = datetime.utcnow)
+    generated_at: datetime = Field(default_factory=datetime.utcnow)
+
 
 # API response wrappers
 
