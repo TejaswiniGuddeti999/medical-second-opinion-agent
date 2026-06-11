@@ -103,3 +103,33 @@ async def test_synthesis():
 
 # run only synthesis — it calls all 3 agents internally
 asyncio.run(test_synthesis())
+
+
+
+from agents.orchestrator import run_analysis
+from app.schemas import PatientCase
+
+async def test_orchestrator():
+    patient = PatientCase(
+        symptoms="Chronic productive cough for 8 months, night sweats, periodic high fevers, significant weight loss despite good appetite, fatigue",
+        lab_results="ESR elevated at 85mm/hr, mild anaemia Hb 10.2g/dL",
+        current_medications="paracetamol 500mg daily, Reswas cough syrup",
+        patient_age=18,
+        patient_sex="male",
+        clinical_history="No previous TB exposure reported",
+    )
+
+    print("\n--- Running full orchestrator ---")
+    report = await run_analysis(patient)
+
+    print("\n=== ORCHESTRATOR FINAL REPORT ===")
+    print(f"Diagnosis  : {report.primary_diagnosis}")
+    print(f"Confidence : {report.confidence:.0%} ({report.confidence_level.value})")
+    print(f"\nImmediate actions:")
+    for a in report.immediate_actions:
+        print(f"  -> {a}")
+    print(f"\nDisagreements: {len(report.disagreements)}")
+    print(f"Consensus points: {len(report.consensus_points)}")
+    print(f"\nProcessing note: all 3 agents ran in parallel")
+
+asyncio.run(test_orchestrator())
