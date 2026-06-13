@@ -37,6 +37,7 @@ async def run_synthesis_agent(
     weighs evidence quality, and produces the final structured report.
     """
     logger.info("synthesis_agent_started")
+    print("REAL PMIDS:", [a.pmid for a in research.articles])
 
     # Build a structured summary of what each agent said
     # This is what gets passed to the LLM — clean, organised, comparable
@@ -72,6 +73,7 @@ Clinical reasoning: {diagnosis.reasoning}
 Differential diagnoses:
 {chr(10).join([f"  - {d.condition}: {d.confidence:.0%}" for d in diagnosis.differential_diagnoses])}
 """
+    real_pmids = ", ".join([a.pmid for a in research.articles])
 
     prompt = f"""You are a SynthesisAgent — the senior consultant in a multi-agent medical second opinion system.
 You have received independent assessments from three specialist agents.
@@ -84,6 +86,8 @@ ORIGINAL PATIENT CASE:
 THREE AGENT ASSESSMENTS:
 {agents_summary}
 
+REAL PMIDS FROM RESEARCH AGENT (use ONLY these, never invent new ones): {real_pmids}
+
 Your task:
 1. Identify where agents AGREE — these are high-confidence findings
 2. Identify where agents DISAGREE — explain WHY they disagree and resolve it
@@ -95,12 +99,10 @@ Respond in this EXACT JSON format:
   "primary_diagnosis": "final diagnosis condition name",
   "confidence": 0.75,
   "immediate_actions": [
-    "specific action the doctor should take immediately",
-    "another immediate action"
+    "specific action the doctor should take immediately"
   ],
   "further_investigations": [
-    "test to confirm diagnosis",
-    "test to rule out alternatives"
+    "test to confirm diagnosis"
   ],
   "red_flags": [
     "warning signs that would change the diagnosis urgently"
@@ -116,20 +118,20 @@ Respond in this EXACT JSON format:
     }}
   ],
   "consensus_points": [
-    "something all three agents agreed on",
-    "another point of consensus"
+    "something all three agents agreed on"
   ],
   "cited_sources": [
-    "PMID: 12345678 — brief description of what this paper contributes"
+    "PMID: {{one of the real PMIDs listed above}} — why this paper supports the diagnosis"
   ],
-  "synthesis_reasoning": "Your full reasoning. Walk through how you weighed the three positions. Be specific about why you resolved disagreements the way you did. This is the most important field."
+  "synthesis_reasoning": "Your full reasoning here."
 }}
 
 Rules:
-- confidence must reflect genuine uncertainty — do not give 0.95 unless truly warranted
+- cited_sources MUST only use PMIDs from this list: {real_pmids}
+- Do NOT invent PMIDs — if a PMID is not in the list above, do not use it
+- confidence must reflect genuine uncertainty
 - red_flags should be specific and actionable
-- If safety agent flagged drug interactions, they MUST appear in immediate_actions
-- cited_sources should only include PMIDs that actually appeared in research agent output
+- If safety agent flagged drug interactions they MUST appear in immediate_actions
 
 Return ONLY the JSON. No preamble, no markdown fences."""
 

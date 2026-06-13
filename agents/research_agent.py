@@ -164,6 +164,8 @@ async def fetch_pubmed_details(pmids: list[str]) -> list[dict]:
         pmid = article["pmid"]
         article["abstract"] = abstracts.get(pmid, "Abstract not available")
 
+    print("RAW METADATA FROM PUBMED:", metadata[:2])  # show first 2 articles
+
     return metadata
 
 
@@ -178,6 +180,16 @@ async def analyze_articles_with_llm(
     Agent is prompted to take a STRONG position — creates the debate.
     """
 
+    # If PubMed returned nothing, be honest — don't hallucinate
+    if not articles:
+        logger.warning("no_articles_to_analyze")
+        return ResearchAgentOutput(
+            articles=[],
+            research_summary="No PubMed articles found for this query.",
+            recommended_workup=[],
+            agent_position="Insufficient literature evidence found for this case. Clinical judgment from other agents should take precedence.",
+        )
+
     articles_text = "\n\n".join([
         f"PMID: {a['pmid']}\n"
         f"Title: {a['title']}\n"
@@ -185,6 +197,10 @@ async def analyze_articles_with_llm(
         f"Abstract: {a['abstract'][:1000]}"
         for a in articles
     ])
+
+    # List real PMIDs explicitly so LLM cannot use others
+    real_pmids = [a["pmid"] for a in articles]
+    real_pmids_str = ", ".join(real_pmids)
 
     prompt = f"""You are a ResearchAgent in a multi-agent medical second opinion system.
 Your role: find the strongest evidence-based position for this case.
@@ -198,14 +214,16 @@ PATIENT CASE:
 PUBMED ARTICLES FOUND:
 {articles_text}
 
+REAL PMIDS (use ONLY these exact PMIDs, never invent new ones): {real_pmids_str}
+
 Respond in this EXACT JSON format:
 {{
   "articles": [
     {{
-      "pmid": "string",
-      "title": "string",
+      "pmid": "use only PMIDs from the list above",
+      "title": "exact title from the articles above",
       "authors": ["string"],
-      "journal": "string",
+      "journal": "exact journal from the articles above",
       "year": 2024,
       "relevance_summary": "why this article matters for THIS case specifically",
       "evidence_quality": "strong|moderate|weak"
@@ -215,6 +233,11 @@ Respond in this EXACT JSON format:
   "recommended_workup": ["test1", "test2"],
   "agent_position": "Your strong, assertive position based strictly on the abstracts above. Be specific. Take a stand."
 }}
+
+Rules:
+- You MUST only use PMIDs from this list: {real_pmids_str}
+- Do NOT invent or modify PMIDs
+- Do NOT use PMIDs like 12345678 or 87654321 — those are fake examples
 
 Return ONLY the JSON. No preamble, no markdown fences."""
 
@@ -228,18 +251,27 @@ Return ONLY the JSON. No preamble, no markdown fences."""
     raw = response.choices[0].message.content
     data = json.loads(raw)
 
-    articles_parsed = [
-        PubMedArticle(
-            pmid=a["pmid"],
-            title=a["title"],
-            authors=a.get("authors", []),
-            journal=a.get("journal", ""),
-            year=int(a["year"]) if str(a.get("year", "")).isdigit() else None,
-            relevance_summary=a["relevance_summary"],
-            evidence_quality=EvidenceQuality(a["evidence_quality"]),
-        )
-        for a in data.get("articles", [])
-    ]
+    # Override LLM output with real PubMed data — never trust LLM for identifiers
+    llm_articles = data.get("articles", [])
+    articles_parsed = []
+
+    for i, llm_article in enumerate(llm_articles):
+        if i < len(articles):
+            # Use real data from PubMed for all factual fields
+            real = articles[i]
+            articles_parsed.append(
+                PubMedArticle(
+                    pmid=real["pmid"],           # real PMID — never LLM's
+                    title=real["title"],         # real title — never LLM's
+                    authors=real.get("authors", []),
+                    journal=real.get("journal", ""),
+                    year=int(real["year"]) if str(real.get("year", "")).isdigit() else None,
+                    relevance_summary=llm_article.get("relevance_summary", ""),  # LLM's reasoning is fine
+                    evidence_quality=EvidenceQuality(
+                        llm_article.get("evidence_quality", "moderate")
+                    ),
+                )
+            )
 
     return ResearchAgentOutput(
         articles=articles_parsed,
@@ -253,28 +285,77 @@ Return ONLY the JSON. No preamble, no markdown fences."""
 
 async def run_research_agent(case_summary: str) -> ResearchAgentOutput:
     """
-    Full pipeline: build query → search PubMed → fetch metadata + abstracts → LLM analysis.
-    This is what the orchestrator calls.
+    Full pipeline: build 3 diverse queries → search PubMed → fetch metadata + abstracts → LLM analysis.
+    3 queries targeting different diagnostic angles prevents confirmation bias.
     """
     logger.info("research_agent_started")
 
-    query_prompt = f"""Extract a focused PubMed search query (max 8 words) from this case.
-Return ONLY the search query, nothing else.
+    # Generate 3 queries targeting DIFFERENT diagnostic possibilities
+    query_prompt = f"""You are a medical librarian helping a doctor investigate a complex case.
+Generate exactly 3 different PubMed search queries for this case.
+Each query MUST target a completely different diagnostic angle or clinical concern.
+Think broadly — consider the most dangerous possibilities first, not the most obvious.
 
-Case: {case_summary}"""
+Rules:
+- Each query must be 3-6 words
+- Each query must be meaningfully different from the others
+- Consider: primary diagnosis, alternative diagnoses, drug complications, comorbidities
+- Use standard medical terminology
+
+Case: {case_summary}
+
+Return ONLY this JSON format:
+{{"queries": ["query one", "query two", "query three"]}}"""
 
     query_response = await client.chat.completions.create(
         model=settings.openai_model,
         messages=[{"role": "user", "content": query_prompt}],
-        temperature=0.1,
+        temperature=0.4,   # slightly higher — we want diverse queries
+        response_format={"type": "json_object"},
     )
-    search_query = query_response.choices[0].message.content.strip()
-    logger.info("search_query_built", query=search_query)
 
-    pmids = await search_pubmed(search_query)
-    articles = await fetch_pubmed_details(pmids)
+    raw_queries = json.loads(query_response.choices[0].message.content)
+    queries = raw_queries.get("queries", [])
+
+    # Fallback if parsing fails
+    if not queries:
+        queries = [case_summary[:50]]
+
+    logger.info("search_queries_built", queries=queries)
+
+    # Search all 3 queries and merge PMIDs
+    all_pmids = []
+    for query in queries[:3]:
+        try:
+            pmids = await search_pubmed(query, max_results=3)
+            logger.info("query_results", query=query, found=len(pmids))
+            all_pmids.extend(pmids)
+        except Exception as e:
+            logger.warning("query_failed", query=query, error=str(e))
+            continue
+
+    # Deduplicate while preserving order
+    seen = set()
+    unique_pmids = []
+    for pmid in all_pmids:
+        if pmid not in seen:
+            seen.add(pmid)
+            unique_pmids.append(pmid)
+
+    logger.info("total_unique_pmids", count=len(unique_pmids))
+
+    # Fetch details only if we have PMIDs
+    articles = []
+    if unique_pmids:
+        articles = await fetch_pubmed_details(unique_pmids[:9])  # max 9 articles
+    else:
+        logger.warning("pubmed_no_results_all_queries", queries=queries)
 
     result = await analyze_articles_with_llm(case_summary, articles)
-    logger.info("research_agent_complete", position_length=len(result.agent_position))
+    logger.info(
+        "research_agent_complete",
+        articles_fetched=len(articles),
+        position_length=len(result.agent_position),
+    )
 
     return result

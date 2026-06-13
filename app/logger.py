@@ -6,7 +6,7 @@ settings = get_settings()
 
 def setup_logging() -> None:
     logging.basicConfig(
-        format = "?(message)s",
+        format = "%(message)s",
         level = getattr(logging, settings.log_level.upper()),
     )
 
