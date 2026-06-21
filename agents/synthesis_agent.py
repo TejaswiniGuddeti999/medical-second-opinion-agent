@@ -31,13 +31,15 @@ async def run_synthesis_agent(
     safety: SafetyAgentOutput,
     diagnosis: DiagnosisAgentOutput,
 ) -> FinalReport:
+    # Takes all 3 agents outputs as input and returns a final report
+    # which is the final deliverable to the user
     """
     The senior consultant in the room.
     Receives all three agent outputs, finds disagreements,
     weighs evidence quality, and produces the final structured report.
     """
     logger.info("synthesis_agent_started")
-    print("REAL PMIDS:", [a.pmid for a in research.articles])
+    # print("REAL PMIDS:", [a.pmid for a in research.articles])
 
     # Build a structured summary of what each agent said
     # This is what gets passed to the LLM — clean, organised, comparable

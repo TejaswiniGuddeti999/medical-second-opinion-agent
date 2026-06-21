@@ -87,7 +87,7 @@ async def parallel_agents_node(state: AgentState) -> dict:
     """
     logger.info("parallel_agents_started")
 
-    # Fire all three at the same time
+    # Fire all three at the same time.Total time is slowest single agent
     results = await asyncio.gather(
         research_node(state),
         safety_node(state),
@@ -106,7 +106,7 @@ async def parallel_agents_node(state: AgentState) -> dict:
 
     logger.info(
         "parallel_agents_complete",
-        research_done=merged.get("research_output") is not None,
+        research_done=merged.get("research_output") is not None, #is not None evaluates to true or fase
         safety_done=merged.get("safety_output") is not None,
         diagnosis_done=merged.get("diagnosis_output") is not None,
     )
@@ -123,6 +123,7 @@ async def synthesis_node(state: AgentState) -> dict:
         logger.info("synthesis_node_started")
 
         # Validate all three outputs exist before synthesising
+        # all() retuns True if every item in the list is True , if false - not all is True , exception is raised
         if not all([
             state.get("research_output"),
             state.get("safety_output"),
@@ -155,6 +156,7 @@ def build_graph() -> StateGraph:
     graph = StateGraph(AgentState)
 
     # Add nodes
+    #registers the function under the name
     graph.add_node("parallel_agents", parallel_agents_node)
     graph.add_node("synthesis",       synthesis_node)
 

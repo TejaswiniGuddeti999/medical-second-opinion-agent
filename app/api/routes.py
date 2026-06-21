@@ -20,7 +20,7 @@ async def health_check():
     Load balancers, Railway, Docker — all ping this to know if your app is alive.
     Returns 200 OK if the service is running.
     """
-    return HealthCheck(status="ok", version=settings.app_version)
+    return HealthCheck(status="ok", version=settings.app_version, database = "connected")
 
 
 @router.post("/analyze", response_model = AnalysisResponse)
@@ -36,6 +36,13 @@ async def analyze_case(
     ssessions manually. This is dependency injection.
     """
     case_id = str(uuid.uuid4()) #generates unique id for every case
+    # Require minimum case information before running expensive agents
+    if len(case.symptoms.strip()) < 20:
+        return AnalysisResponse(
+            case_id=case_id,
+            status="insufficient_data",
+            error="Please provide more detailed symptoms for a meaningful analysis. Minimum 20 characters required.",
+        )
     start = time.time()
 
     logger.info("analysis_request_received", case_id = case_id)

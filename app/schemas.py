@@ -40,7 +40,7 @@ class PatientCase(BaseModel):
         description = "Current medications for drug interaction check"
     )
     patient_age : Optional[int] = Field(None, ge=0, le=130)
-    patient_sex: Optional[str] = Field(None, patter = "^(male|female|other)")
+    patient_sex: Optional[str] = Field(None, pattern = "^(male|female|other)$")
     clinical_history: Optional[str] = Field(
         None,
         description = "Relevant past medical history"

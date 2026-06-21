@@ -41,6 +41,8 @@ app.add_middleware(
 )
 
 # Register all routes under /api/v1
+# all endpoints gets mounted on the app and prefixed. Prefixed
+#because it allows us to know which version we are in
 app.include_router(router, prefix="/api/v1")
 
 @app.get("/")

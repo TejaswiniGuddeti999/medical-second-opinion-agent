@@ -1,5 +1,6 @@
 import httpx
 import json
+import asyncio
 from tenacity import retry, stop_after_attempt, wait_exponential
 from app.config import get_settings
 from app.schemas import SafetyAgentOutput, DrugInteraction
@@ -12,71 +13,67 @@ client = AsyncOpenAI(api_key=settings.openai_api_key)
 
 # OpenFDA API
 
-@retry(stop = stop_after_attempt(3) , wait = wait_exponential(min=1, max=10))
-async def fetch_drug_interactions(medications: list[str]) ->list[dict]:
-    """
-    Query OpenFDA for each medication.
-    OpenFDA needs no API key - This is completely free and open
-    """
+# FIXED — retry wraps only the single drug call
 
+@retry(stop=stop_after_attempt(3), wait=wait_exponential(min=1, max=10))
+async def fetch_single_drug(http: httpx.AsyncClient, drug: str) -> dict | None:
+    response = await http.get(
+        f"{settings.openfda_base_url}/label.json",
+        params={
+            "search": f"openfda.brand_name:{drug}+OR+openfda.generic_name:{drug}",
+            "limit": 1,
+        },
+        timeout=15.0,
+    )
+    if response.status_code == 404:
+        logger.warning("drug_not_found_in_fda", drug=drug)
+        return None
+    response.raise_for_status()
+    data = response.json()
+    if data.get("results"):
+        result = data["results"][0]
+        return {
+            "drug": drug,
+            "warnings": result.get("warnings", [""])[0][:500] if result.get("warnings") else "",
+            "contraindications": result.get("contraindications", [""])[0][:500] if result.get("contraindications") else "",
+            "drug_interactions": result.get("drug_interactions", [""])[0][:500] if result.get("drug_interactions") else "",
+            "precautions": result.get("precautions", [""])[0][:500] if result.get("precautions") else "",
+        }
+    return None
+
+
+# All drugs queried simultaneously
+async def fetch_drug_interactions(medications: list[str]) -> list[dict]:
     if not medications:
         return []
 
-    all_interactions = []
-
     async with httpx.AsyncClient() as http:
-        for drug in medications:
-            try:
-                response = await http.get(
-                    f"{settings.openfda_base_url}/label.json",
-                    params={
-                        "search": f"openfda.brand_name:;{drug}+OR+openfda.generic_name:{drug}",
-                        "limit":1,
-                    },
-                    timeout=15.0,
-                )
+        tasks = [fetch_single_drug(http, drug) for drug in medications]
+        results = await asyncio.gather(*tasks, return_exceptions=True)
 
-                if response.status_code == 404:
-                    # drug not found in FDA databse - not an error, just log it
-                    logger.warning("drug_not_found_in_fda", drug=drug)
-                    continue
-                
-                response.raise_for_status()
-                data = response.json()
+    all_interactions = []
+    for drug, result in zip(medications, results):
+        if isinstance(result, Exception):
+            logger.error("fda_api_error", drug=drug, error=str(result))
+        elif result is not None:
+            all_interactions.append(result)
 
-                if data.get("results"):
-                    result = data['results'][0]
-                    all_interactions.append({
-                        "drug" : drug,
-                        "warnings": result.get("warnings", [""])[0][:500] if result.get("warnings") else "",
-                        "contraindications": result.get("contraindications", [""])[0][:500] if result.get("contraindications") else "",
-                        "drug_interactions": result.get("drug_interactions", [""])[0][:500] if result.get("drug_interactions") else "",
-                        "precautions": result.get("precautions", [""])[0][:500] if result.get("precautions") else "",
-                    })
-            except httpx.HTTPStatusError as e:
-                logger.error("fda_api_error", drug=drug, status = e.response.status_code)
-                continue
-
-        logger.info("fda_fetch_complete",drugs_checked=len(medications), data_found = len(all_interactions))
-        return all_interactions
+    logger.info("fda_fetch_complete", drugs_checked=len(medications), data_found=len(all_interactions))
+    return all_interactions
 
 
 def extract_medications(medications_text: str) -> list[str]:
-    """
-    Parse a free-text medication list into individual drug names.
-    Handles: 'lisinopril 10mg, metformin 500mg' → ['lisinopril', 'metformin']
-    """
     import re
-    # Split on commas, newlines, semicolons
     raw = re.split(r'[,;\n]+', medications_text)
     drugs = []
     for item in raw:
-        # Remove dosages like '10mg', '500 mg', 'twice daily'
-        clean = re.sub(r'\d+\s*mg.*', '', item, flags=re.IGNORECASE)
-        clean = re.sub(r'(once|twice|daily|morning|evening|oral|tablet|capsule)', '', clean, flags=re.IGNORECASE)
+        # Remove dosage numbers and units
+        clean = re.sub(r'\d+\.?\d*\s*(mg|mcg|ml|g|units?)\b.*', '', item, flags=re.IGNORECASE)
+        # Remove frequency and form words
+        clean = re.sub(r'\b(once|twice|daily|morning|evening|oral|tablet|capsule|extended|release|er|xr)\b', '', clean, flags=re.IGNORECASE)
         clean = clean.strip()
         if clean and len(clean) > 2:
-            drugs.append(clean)
+            drugs.append(clean.lower())   # ← normalize to lowercase so "Metformin" and "metformin" match FDA records
     return drugs
 
 
@@ -133,17 +130,25 @@ Return ONLY the JSON. No preamble, no markdown fences."""
     )
 
     data = json.loads(response.choices[0].message.content)
-
-    interactions = [
-        DrugInteraction(
-            drug_name=i["drug_name"],
-            interaction_type=i["interaction_type"],
-            severity=i["severity"],
-            description=i["description"],
-        )
-        for i in data.get("interactions_found", []
-        )
-    ]
+    fda_drugs = {d["drug"].lower() for d in fda_data}
+    
+    interactions = []
+    for i in data.get("interactions_found", []):
+        if i["drug_name"].lower() in fda_drugs:        # only trust LLM on drugs FDA confirmed
+            interactions.append(
+                DrugInteraction(
+                    drug_name=i["drug_name"],
+                    interaction_type=i["interaction_type"],
+                    severity=i["severity"],
+                    description=i["description"],
+                )
+            )
+        else:
+            logger.warning(
+                "llm_hallucinated_drug_interaction",
+                drug=i["drug_name"],
+                fda_drugs_available=list(fda_drugs),
+            )
 
     return SafetyAgentOutput(
         interactions_found=interactions,
@@ -166,6 +171,8 @@ async def run_safety_agent(case_summary: str, medications_text: str = "") -> Saf
     medications = extract_medications(medications_text) if medications_text else []
     logger.info("medications_extracted", count=len(medications), drugs=medications)
 
+    # await says pause this function and give control back to the event loop until this one thing finishes
+    # It is about freezing the entire server while one request is waiting for an external API
     fda_data = await fetch_drug_interactions(medications)
 
     result = await analyze_safety_with_llm(case_summary, medications, fda_data)

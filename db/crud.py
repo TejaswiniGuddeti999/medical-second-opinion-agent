@@ -29,7 +29,7 @@ async def save_report(
     db: AsyncSession,
     case_id: str,
     report: FinalReport,
-    processing_time: float = None,
+    processing_time = None,
 ):
     """Save completed report after analysis finishes."""
     record = ReportRecord(

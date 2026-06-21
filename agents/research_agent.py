@@ -1,8 +1,8 @@
-import httpx
-import json
-import asyncio
-from tenacity import retry, stop_after_attempt, wait_exponential
-from app.config import get_settings
+import httpx #async http client like requests
+import json #parse json responses
+import asyncio # run multiple API calls at the same time (parallel)
+from tenacity import retry, stop_after_attempt, wait_exponential #retry library. Automatically retries if an API call fails
+from app.config import get_settings 
 from app.schemas import (
     ResearchAgentOutput,
     PubMedArticle,
@@ -17,24 +17,39 @@ client = AsyncOpenAI(api_key=settings.openai_api_key)
 
 
 # ── PubMed API calls ───────────────────────────────────────────────────────────
-
+# retry decorator- If a func throws error , try again upto 3 times , waiting for 1 , 2 and 4 seconds between attempts
 @retry(stop=stop_after_attempt(3), wait=wait_exponential(min=1, max=10))
-async def search_pubmed(query: str, max_results: int = 5) -> list[str]:
-    """Search PubMed and return a list of PMIDs."""
+async def search_pubmed(query: str, max_results: int = 3) -> list[str]:
     async with httpx.AsyncClient() as http:
         response = await http.get(
             f"{settings.ncbi_base_url}/esearch.fcgi",
             params={
                 "db": "pubmed",
-                "term": query,
+                "term": f"{query} AND humans[MH] AND English[lang] AND (clinical trial[pt] OR meta-analysis[pt] OR randomized controlled trial[pt] OR systematic review[pt] OR review[pt])",
                 "retmax": max_results,
-                "retmode": "json",
+                "retmode" :  "json",
                 "api_key": settings.ncbi_api_key,
+                "datetype": "pdat",
+                "mindate": "2015",
+                "maxdate": "2026",
             },
             timeout=15.0,
         )
         response.raise_for_status()
         data = response.json()
+        print("PUBMED RAW RESPONSE:", json.dumps(data, indent=2))
+
+        # ── ADD THIS BLOCK ──────────────────────────────────────
+        if "esearchresult" not in data:
+            logger.error(
+                "pubmed_unexpected_response",
+                query=query,
+                response_keys=list(data.keys()),   # shows what keys ARE there
+                response_body=str(data)[:500],     # shows the actual error message
+            )
+            raise ValueError(f"PubMed returned unexpected response: {data}")
+        # ────────────────────────────────────────────────────────
+
         pmids = data["esearchresult"]["idlist"]
         logger.info("pubmed_search_complete", query=query, results_found=len(pmids))
         return pmids
@@ -50,28 +65,42 @@ async def fetch_pubmed_metadata(pmids: list[str]) -> list[dict]:
         return []
 
     await asyncio.sleep(1)
-
+    
+    # creates a http client. Like opening a browser session but it automatically closes and cleans up the connectoin
     async with httpx.AsyncClient() as http:
+        # makes a GET request to PubMed's esummary endpoint
         response = await http.get(
             f"{settings.ncbi_base_url}/esummary.fcgi",
             params={
+                # tells API which NCBI database to search because it hosts many datavases and pubmed has literature
                 "db": "pubmed",
+                # Pubmed accepts multiple PMIDs as list of comma seperated valuse
                 "id": ",".join(pmids),
+                # tells API to return in JOSON format instal of default XML
                 "retmode": "json",
+                # without key - 3 requests per socond, with key - 10 requests per second
                 "api_key": settings.ncbi_api_key,
             },
+            # If PubMed doesn't respond within 20 secods, it raises timeout error, which is caught
+            # by retry decorator and retires
             timeout=20.0,
         )
+        # if http response code is an error, this line throws an exception immediately and continues
         response.raise_for_status()
 
+        # if search results are empty, raises an error which is again coaught by retry logic
         if not response.content or not response.text.strip():
             logger.warning("pubmed_metadata_empty", pmids=pmids)
             raise ValueError("PubMed returned empty metadata response")
 
+        # parse raw response text into a Python dictinary
         data = response.json()
+        # Initialize empty list to store articles
         articles = []
 
         for pmid in pmids:
+            # gets result key from response, if it doesnt exist return {}
+            # and checks if pmid is present in the article
             if pmid in data.get("result", {}):
                 article = data["result"][pmid]
                 articles.append({
@@ -80,6 +109,7 @@ async def fetch_pubmed_metadata(pmids: list[str]) -> list[dict]:
                     "authors": [
                         a.get("name", "") for a in article.get("authors", [])
                     ],
+                    #un abbreviated journal name, source is abbreviated
                     "journal": article.get("fulljournalname", ""),
                     "year": article.get("pubdate", "")[:4],
                     "abstract": "",  # placeholder — filled by fetch_pubmed_abstracts
@@ -91,11 +121,6 @@ async def fetch_pubmed_metadata(pmids: list[str]) -> list[dict]:
 
 @retry(stop=stop_after_attempt(3), wait=wait_exponential(min=2, max=15))
 async def fetch_pubmed_abstracts(pmids: list[str]) -> dict[str, str]:
-    """
-    Fetch actual abstract text for each PMID using PubMed's efetch endpoint.
-    Returns a dict of {pmid: abstract_text}.
-    This is real paper content — not LLM hallucination.
-    """
     if not pmids:
         return {}
 
@@ -108,38 +133,48 @@ async def fetch_pubmed_abstracts(pmids: list[str]) -> dict[str, str]:
                 "db": "pubmed",
                 "id": ",".join(pmids),
                 "rettype": "abstract",
-                "retmode": "text",
+                "retmode": "xml",          # ← changed from "text"
                 "api_key": settings.ncbi_api_key,
             },
             timeout=20.0,
         )
         response.raise_for_status()
 
-        raw_text = response.text
-        if not raw_text.strip():
+        raw_xml = response.text
+        if not raw_xml.strip():
             logger.warning("pubmed_abstracts_empty", pmids=pmids)
             return {}
 
-        # PubMed returns all abstracts concatenated with PMID markers
+        # Parse XML — no manual line-by-line splitting needed
+        import xml.etree.ElementTree as ET
+        root = ET.fromstring(raw_xml)
+
         abstracts = {}
-        current_pmid = None
-        current_lines = []
 
-        for line in raw_text.split('\n'):
-            for pmid in pmids:
-                if pmid in line:
-                    if current_pmid and current_lines:
-                        abstracts[current_pmid] = ' '.join(current_lines).strip()
-                    current_pmid = pmid
-                    current_lines = []
-                    break
-            else:
-                if current_pmid:
-                    current_lines.append(line.strip())
+        for article in root.findall(".//PubmedArticle"):
+            # PMID — clean, unambiguous
+            pmid_el = article.find(".//PMID")
+            if pmid_el is None:
+                continue
+            pmid = pmid_el.text.strip()
 
-        # Capture the last abstract
-        if current_pmid and current_lines:
-            abstracts[current_pmid] = ' '.join(current_lines).strip()
+            # Abstract — may have multiple sections (Background, Methods, etc.)
+            abstract_texts = article.findall(".//AbstractText")
+            if not abstract_texts:
+                abstracts[pmid] = "Abstract not available"
+                continue
+
+            # Some abstracts have labeled sections, some don't
+            sections = []
+            for section in abstract_texts:
+                label = section.get("Label")      # e.g. "BACKGROUND", "METHODS"
+                text = section.text or ""
+                if label:
+                    sections.append(f"{label}: {text}")
+                else:
+                    sections.append(text)
+
+            abstracts[pmid] = " ".join(sections).strip()
 
         logger.info("abstracts_fetched", count=len(abstracts))
         return abstracts
@@ -162,6 +197,7 @@ async def fetch_pubmed_details(pmids: list[str]) -> list[dict]:
     # Merge abstract text into each article dict
     for article in metadata:
         pmid = article["pmid"]
+        # we left a blank placeholder for abstracts in metadata, now we try to replace it.
         article["abstract"] = abstracts.get(pmid, "Abstract not available")
 
     print("RAW METADATA FROM PUBMED:", metadata[:2])  # show first 2 articles
@@ -194,7 +230,7 @@ async def analyze_articles_with_llm(
         f"PMID: {a['pmid']}\n"
         f"Title: {a['title']}\n"
         f"Journal: {a['journal']} ({a['year']})\n"
-        f"Abstract: {a['abstract'][:1000]}"
+        f"Abstract: {a['abstract'][:2000]}"
         for a in articles
     ])
 
@@ -251,27 +287,32 @@ Return ONLY the JSON. No preamble, no markdown fences."""
     raw = response.choices[0].message.content
     data = json.loads(raw)
 
-    # Override LLM output with real PubMed data — never trust LLM for identifiers
-    llm_articles = data.get("articles", [])
-    articles_parsed = []
+    
+    # Build lookup from LLM response by PMID
+    llm_lookup = {
+        item.get("pmid"): item
+        for item in data.get("articles", [])
+    }
 
-    for i, llm_article in enumerate(llm_articles):
-        if i < len(articles):
-            # Use real data from PubMed for all factual fields
-            real = articles[i]
-            articles_parsed.append(
-                PubMedArticle(
-                    pmid=real["pmid"],           # real PMID — never LLM's
-                    title=real["title"],         # real title — never LLM's
-                    authors=real.get("authors", []),
-                    journal=real.get("journal", ""),
-                    year=int(real["year"]) if str(real.get("year", "")).isdigit() else None,
-                    relevance_summary=llm_article.get("relevance_summary", ""),  # LLM's reasoning is fine
-                    evidence_quality=EvidenceQuality(
-                        llm_article.get("evidence_quality", "moderate")
-                    ),
-                )
+    # Iterate over ALL real PubMed articles — not LLM's selection
+    articles_parsed = []
+    for real in articles:
+        pmid = real["pmid"]
+        llm_data = llm_lookup.get(pmid, {})  # get LLM's reasoning if it exists, else {}
+
+        articles_parsed.append(
+            PubMedArticle(
+                pmid=real["pmid"],
+                title=real["title"],
+                authors=real.get("authors", []),
+                journal=real.get("journal", ""),
+                year=int(real["year"]) if str(real.get("year", "")).isdigit() else None,
+                relevance_summary=llm_data.get("relevance_summary", "No summary provided"),
+                evidence_quality=EvidenceQuality(
+                    llm_data.get("evidence_quality", "moderate")
+                ),
             )
+        )
 
     return ResearchAgentOutput(
         articles=articles_parsed,
@@ -301,6 +342,8 @@ Rules:
 - Each query must be meaningfully different from the others
 - Consider: primary diagnosis, alternative diagnoses, drug complications, comorbidities
 - Use standard medical terminology
+- Focus on diagnostic criteria and clinical presentation papers
+- NOT molecular mechanisms or basic science
 
 Case: {case_summary}
 
@@ -327,11 +370,16 @@ Return ONLY this JSON format:
     all_pmids = []
     for query in queries[:3]:
         try:
-            pmids = await search_pubmed(query, max_results=3)
+            pmids = await search_pubmed(query, max_results=5)
             logger.info("query_results", query=query, found=len(pmids))
             all_pmids.extend(pmids)
         except Exception as e:
-            logger.warning("query_failed", query=query, error=str(e))
+            logger.error(            # ← was logger.warning
+                "query_failed",
+                query=query,
+                error=str(e),
+                exc_info=True        # ← ADD THIS — logs full stack trace
+            )
             continue
 
     # Deduplicate while preserving order
@@ -347,7 +395,7 @@ Return ONLY this JSON format:
     # Fetch details only if we have PMIDs
     articles = []
     if unique_pmids:
-        articles = await fetch_pubmed_details(unique_pmids[:9])  # max 9 articles
+        articles = await fetch_pubmed_details(unique_pmids[:15])  # max 9 articles
     else:
         logger.warning("pubmed_no_results_all_queries", queries=queries)
 

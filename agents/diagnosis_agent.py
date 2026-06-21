@@ -111,7 +111,8 @@ Return ONLY the JSON. No preamble, no markdown fences."""
         reasoning=data["reasoning"],
         agent_position=data["agent_position"],
     )
-
+    #  Logs three things — what the primary diagnosis is, how confident, and how many 
+    # alternatives were generated.
     logger.info(
         "diagnosis_agent_complete",
         primary=result.primary_diagnosis.condition,
