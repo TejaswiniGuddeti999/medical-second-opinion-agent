@@ -55,8 +55,7 @@ async def analyze_case(
         elapsed = round(time.time() - start, 2)
 
         # Save the completed report to DB
-        await crud.save_report(db, case_id=case_id, report=report)
-
+        await crud.save_report(db, case_id=case_id, report=report, processing_time=elapsed)
         logger.info(
             "analyze_request_complete",
             case_id=case_id,

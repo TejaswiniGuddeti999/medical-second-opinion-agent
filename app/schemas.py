@@ -95,6 +95,7 @@ class DiagnosisCandidate(BaseModel):
     confidence_level: ConfidenceLevel
     supporting_evidence: list[str]
     against_evidence: list[str]
+    missing_information: list[str] = Field(default_factory=list)
     recommended_tests: list[str] =[]
 
 class DiagnosisAgentOutput(BaseModel):
@@ -115,7 +116,7 @@ class AgentDisagreement(BaseModel):
     resolution_confidence: ConfidenceLevel
 
 class FinalReport(BaseModel):
-    primary_diagnosis: str                    # ← correct spelling
+    primary_diagnosis: str                    
     confidence: float = Field(..., ge=0.0, le=1.0)
     confidence_level: ConfidenceLevel
     research_output: ResearchAgentOutput

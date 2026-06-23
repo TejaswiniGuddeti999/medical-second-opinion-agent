@@ -25,7 +25,18 @@ async def search_pubmed(query: str, max_results: int = 3) -> list[str]:
             f"{settings.ncbi_base_url}/esearch.fcgi",
             params={
                 "db": "pubmed",
-                "term": f"{query} AND humans[MH] AND English[lang] AND (clinical trial[pt] OR meta-analysis[pt] OR randomized controlled trial[pt] OR systematic review[pt] OR review[pt])",
+                "term": f"""{query}
+                        AND "Humans"[MeSH Terms]
+                        AND English[lang]
+                        AND (
+                            meta-analysis[pt]
+                            OR systematic review[pt]
+                            OR review[pt]
+                            OR clinical trial[pt]
+                            OR randomized controlled trial[pt]
+                            OR guideline[pt]
+                            OR practice guideline[pt]
+                        )""",
                 "retmax": max_results,
                 "retmode" :  "json",
                 "api_key": settings.ncbi_api_key,
@@ -204,6 +215,62 @@ async def fetch_pubmed_details(pmids: list[str]) -> list[dict]:
 
     return metadata
 
+async def score_article_relevance(
+    case_summary: str,
+    articles: list[dict]
+) -> list[dict]:
+    async def score_one(article: dict) -> dict:
+        prompt = f"""
+        Patient Case:
+        {case_summary}
+
+        Article:
+        Title: {article['title']}
+        Abstract: {article['abstract'][:2000]}
+
+        Evaluate relevance to THIS SPECIFIC PATIENT.
+
+        Do not score based solely on sharing the same medical specialty.
+
+        A paper about cardiovascular disease is NOT automatically relevant to STEMI.
+
+        A paper about pediatric disease is NOT relevant to adults.
+
+        Score 10:
+        Directly addresses diagnosis, treatment, prognosis, or management of this patient's condition.
+
+        Score 7-9:
+        Highly relevant and clinically useful.
+
+        Score 4-6:
+        Related disease area but not directly useful for this patient.
+
+        Score 0-3:
+        Different population, different disease, rare complication, or not clinically actionable.
+
+        Return only in JSON format:
+        {{
+        "score": 8,
+        "reason": "short explanation"
+        }}
+        """
+
+        response = await client.chat.completions.create(
+            model=settings.openai_model,
+            messages=[{"role": "user", "content": prompt}],
+            temperature=0,
+            response_format={"type": "json_object"},
+        )
+        result = json.loads(response.choices[0].message.content)
+        article["relevance_score"] = result["score"]
+        article["relevance_reason"] = result["reason"]
+        return article
+
+    # Score ALL articles simultaneously instead of one by one
+    scored = await asyncio.gather(*[score_one(a) for a in articles])
+    return sorted(scored, key=lambda x: x["relevance_score"], reverse=True)
+
+
 
 # ── LLM analysis ───────────────────────────────────────────────────────────────
 
@@ -332,23 +399,40 @@ async def run_research_agent(case_summary: str) -> ResearchAgentOutput:
     logger.info("research_agent_started")
 
     # Generate 3 queries targeting DIFFERENT diagnostic possibilities
-    query_prompt = f"""You are a medical librarian helping a doctor investigate a complex case.
-Generate exactly 3 different PubMed search queries for this case.
-Each query MUST target a completely different diagnostic angle or clinical concern.
-Think broadly — consider the most dangerous possibilities first, not the most obvious.
+    query_prompt = f"""
+    You are a medical librarian.
 
-Rules:
-- Each query must be 3-6 words
-- Each query must be meaningfully different from the others
-- Consider: primary diagnosis, alternative diagnoses, drug complications, comorbidities
-- Use standard medical terminology
-- Focus on diagnostic criteria and clinical presentation papers
-- NOT molecular mechanisms or basic science
+    Generate exactly 3 PubMed search queries.
 
-Case: {case_summary}
+    Query 1:
+    Symptoms, labs, and objective findings only.
+    Do not mention a diagnosis unless it is nearly certain.
+    If diagnostic uncertainty exists, prefer syndrome-level queries over disease-level queries.
 
-Return ONLY this JSON format:
-{{"queries": ["query one", "query two", "query three"]}}"""
+    Query 2:
+    Evidence-based management of the most likely condition OR syndrome.
+    If diagnostic uncertainty exists, focus on management of the clinical syndrome rather than a specific disease.
+
+    Query 3:
+    Most plausible alternative diagnosis that explains the symptoms and labs.
+    The alternative diagnosis must be meaningfully different from Query 1.
+
+    Rules:
+    - Use clinical terminology.
+    - Avoid rare complications unless directly supported.
+    - Avoid molecular biology.
+    - Avoid basic science.
+    - Focus on diagnosis and treatment studies.
+    - 3-8 words per query.
+
+    Case:
+    {case_summary}
+
+    Return ONLY valid JSON in this format:
+
+
+    {{"queries": ["...", "...", "..."]}}
+    """
 
     query_response = await client.chat.completions.create(
         model=settings.openai_model,
@@ -395,7 +479,23 @@ Return ONLY this JSON format:
     # Fetch details only if we have PMIDs
     articles = []
     if unique_pmids:
-        articles = await fetch_pubmed_details(unique_pmids[:15])  # max 9 articles
+        articles = await fetch_pubmed_details(unique_pmids[:15])
+        articles = await score_article_relevance(
+                    case_summary,
+                    articles
+                            )
+        for a in articles:
+            logger.info(
+                "relevance_score",
+                title=a["title"],
+                score=a["relevance_score"],
+                reason=a["relevance_reason"]
+            )
+        articles = sorted(
+                articles,
+                key=lambda x: x["relevance_score"],
+                reverse=True
+            )[:5]  
     else:
         logger.warning("pubmed_no_results_all_queries", queries=queries)
 

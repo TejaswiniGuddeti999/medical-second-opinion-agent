@@ -1,5 +1,5 @@
-import streamlit as st
-import requests
+import streamlit as st #UI framework
+import requests # To call FastAPI backend
 import json
 from datetime import datetime
 
@@ -7,18 +7,20 @@ from datetime import datetime
 # The URL of your FastAPI backend
 # When running locally both run on your machine
 # When deployed on Railway this becomes your live URL
-API_URL = "http://localhost:8000/api/v1"
+API_URL = "http://localhost:8000/api/v1" #baseurl
 
-# Page config — must be the very first Streamlit call
+# Page config - This should be the very first Streamlit call
+# Streamlit throws error if anything else runs before tis
 st.set_page_config(
     page_title="Medical Second Opinion",
     page_icon="",
-    layout="wide",
+    layout="wide", # which means app uses full browser instead of narrow centerd column
 )
 
 
 # ── Styling ────────────────────────────────────────────────────────────────────
-# Streamlit allows injecting custom CSS
+# Streamlit allows injecting custom CSS.
+#These classes get used when displaying confidence levels and disclaimers
 st.markdown("""
 <style>
     .confidence-high   { color: #0F6E56; font-weight: 500; }
@@ -64,16 +66,17 @@ def display_report(report: dict, processing_time: float = None):
     col1, col2, col3 = st.columns([2, 1, 1])
 
     with col1:
-        st.markdown("### Primary Diagnosis")
-        st.markdown(f"## {report['primary_diagnosis']}")
-
+        # everything indented inside renders inside this column
+        st.markdown("### Primary Diagnosis") # smaller heading
+        st.markdown(f"## {report['primary_diagnosis']}") # larger one
+ 
     with col2:
         confidence = report['confidence']
         level = report['confidence_level']
         st.markdown("### Confidence")
         st.markdown(
             f"<span class='{confidence_color(level)}'>"
-            f"{confidence:.0%} ({level})</span>",
+            f"{confidence:.0%} ({level})</span>",   
             unsafe_allow_html=True
         )
 
