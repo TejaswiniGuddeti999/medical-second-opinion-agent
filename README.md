@@ -2,8 +2,7 @@
 
 A multi-agent AI system that generates structured second opinions for rheumatology and autoimmune cases, grounded in real PubMed literature and FDA drug safety data.
 
-**Live demo:** [acceptable-solace-production-0e5c.up.railway.app](https://acceptable-solace-production-0e5c.up.railway.app)
-
+**Live demo:** [medical-second-opinion.up.railway.app](https://medical-second-opinion.up.railway.app)
 ---
 
 ## What it does
