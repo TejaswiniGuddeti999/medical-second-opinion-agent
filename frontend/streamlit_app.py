@@ -126,7 +126,7 @@ def display_report(report: dict, processing_time: float = None):
                     st.markdown(
                         f"**{a['title'][:80]}...**  \n"
                         f"*{a['journal']}* ({a.get('year', '')})  \n"
-                        f"PMID: {a['pmid']}  \n"
+                        f"[PMID: {a['pmid']}](https://pubmed.ncbi.nlm.nih.gov/{a['pmid']}/)  \n"
                         f"{a['relevance_summary']}"
                     )
                     st.markdown("---")
@@ -208,14 +208,6 @@ def display_report(report: dict, processing_time: float = None):
         st.markdown("### Further investigations")
         for inv in investigations:
             st.markdown(f"- {inv}")
-
-    # ── Cited sources ──────────────────────────────────────────────────────────
-    cited = report.get('cited_sources', [])
-    if cited:
-        with st.expander("Cited sources"):
-            for source in cited:
-                st.markdown(f"- {source}")
-
 
 # ── Main app ───────────────────────────────────────────────────────────────────
 
