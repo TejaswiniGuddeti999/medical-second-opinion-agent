@@ -2,12 +2,14 @@ import streamlit as st #UI framework
 import requests # To call FastAPI backend
 import json
 from datetime import datetime
+import os
+
 
 # ── Config ─────────────────────────────────────────────────────────────────────
 # The URL of your FastAPI backend
 # When running locally both run on your machine
 # When deployed on Railway this becomes your live URL
-API_URL = "http://localhost:8000/api/v1" #baseurl
+API_URL = os.getenv("API_URL", "http://localhost:8000/api/v1")l
 
 # Page config - This should be the very first Streamlit call
 # Streamlit throws error if anything else runs before tis
