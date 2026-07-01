@@ -1,28 +1,18 @@
-# LLM
-openai==1.30.1
-
-# API framework
-fastapi==0.111.0
-uvicorn[standard]==0.29.0
-python-multipart==0.0.9
-
-# Data validation
-pydantic==2.7.1
-pydantic-settings==2.2.1
-
-# Database
-sqlalchemy==2.0.30
-alembic==1.13.1
-asyncpg==0.29.0
-psycopg2-binary==2.9.9
-
-# HTTP client
-httpx==0.27.0
-
-# Frontend
-streamlit==1.35.0
-
-# Utilities
-python-dotenv==1.0.1
-tenacity==8.3.0
-structlog==24.1.0
+openai
+fastapi
+uvicorn[standard]
+python-multipart
+pydantic
+pydantic-settings
+sqlalchemy
+alembic
+asyncpg
+psycopg2-binary
+httpx
+streamlit
+python-dotenv
+tenacity
+structlog
+langgraph
+langchain-core
+langsmith
