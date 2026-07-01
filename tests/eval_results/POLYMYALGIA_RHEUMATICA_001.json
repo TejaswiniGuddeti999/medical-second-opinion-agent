@@ -1,0 +1,15 @@
+{
+  "case_id": "POLYMYALGIA_RHEUMATICA_001",
+  "difficulty": "moderate",
+  "expected_primary": "Polymyalgia Rheumatica",
+  "acceptable": [
+    "PMR"
+  ],
+  "elapsed_seconds": 34.0,
+  "error": "Analysis failed: SynthesisAgent failed: Missing agent outputs: ['research_output']",
+  "system_diagnosis": null,
+  "system_confidence": null,
+  "cosine_similarity": null,
+  "manual_match": "No",
+  "manual_notes": "Case crashed: Analysis failed: SynthesisAgent failed: Missing agent outputs: ['research_output']"
+}

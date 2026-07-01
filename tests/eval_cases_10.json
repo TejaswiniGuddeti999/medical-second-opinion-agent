@@ -1,0 +1,152 @@
+[
+  {
+    "id": "RA_METHOTREXATE_001",
+    "difficulty": "moderate",
+    "expected_primary": "Methotrexate-induced Bone Marrow Suppression",
+    "acceptable": ["Methotrexate Toxicity", "Drug-Induced Pancytopenia"],
+    "ground_truth_source": "Methotrexate prescribing information; trimethoprim-sulfamethoxazole synergistic antifolate toxicity is well-documented",
+    "reference_answer": "This patient on chronic methotrexate for RA has developed pancytopenia with macrocytosis after starting trimethoprim-sulfamethoxazole, a known antifolate that synergizes with methotrexate to cause severe bone marrow suppression. Immediate discontinuation of both methotrexate and the antibiotic is required, along with leucovorin (folinic acid) rescue therapy and close monitoring of blood counts. This is a recognized, dangerous drug interaction in RA management.",
+    "case": {
+      "symptoms": "58-year-old male with known rheumatoid arthritis for 4 years, presenting with mouth ulcers, fatigue, and easy bruising for 1 week. Started a course of antibiotics for a UTI 10 days ago.",
+      "lab_results": "WBC 1,800 (low). Platelets 65,000 (low). Hemoglobin 9.1 (low). Mean corpuscular volume elevated (macrocytic).",
+      "current_medications": "Methotrexate 15mg weekly, Folic acid 5mg weekly, Trimethoprim-sulfamethoxazole 800/160mg twice daily",
+      "patient_age": 58,
+      "patient_sex": "male"
+    }
+  },
+  {
+    "id": "GOUT_001",
+    "difficulty": "easy",
+    "expected_primary": "Acute Gout Flare",
+    "acceptable": ["Gouty Arthritis", "Acute Gouty Monoarthritis"],
+    "ground_truth_source": "2015 ACR/EULAR Gout Classification Criteria",
+    "reference_answer": "Acute monoarticular pain and swelling of the first MTP joint (podagra) with hyperuricemia is classic for acute gout. Confirmatory diagnosis requires joint aspiration showing negatively birefringent monosodium urate crystals, but the clinical picture alone is highly suggestive. Treatment involves NSAIDs, colchicine, or corticosteroids for the acute flare; urate-lowering therapy is deferred until the flare resolves.",
+    "case": {
+      "symptoms": "62-year-old male with sudden onset severe pain, redness, and swelling of the right big toe overnight. Unable to bear weight. No prior similar episodes.",
+      "lab_results": "Serum uric acid 9.8 mg/dL (elevated). WBC mildly elevated at 11,200. CRP elevated.",
+      "current_medications": "Hydrochlorothiazide 25mg daily for hypertension",
+      "patient_age": 62,
+      "patient_sex": "male"
+    }
+  },
+  {
+    "id": "PSORIATIC_ARTHRITIS_001",
+    "difficulty": "moderate",
+    "expected_primary": "Psoriatic Arthritis",
+    "acceptable": ["PsA"],
+    "ground_truth_source": "CASPAR (ClASsification criteria for Psoriatic ARthritis) criteria",
+    "reference_answer": "Asymmetric oligoarthritis with dactylitis (sausage digit), nail pitting, and a personal history of psoriasis meets CASPAR criteria for psoriatic arthritis. RF and anti-CCP negativity helps distinguish this from rheumatoid arthritis. Treatment typically begins with NSAIDs for mild disease, escalating to DMARDs or biologics (TNF inhibitors) for more severe or erosive disease.",
+    "case": {
+      "symptoms": "41-year-old male with chronic plaque psoriasis for 10 years, now with swelling and pain in the right third finger (entire digit swollen, sausage-like appearance) and left knee for 6 weeks. Nail pitting noted on examination.",
+      "lab_results": "RF negative. Anti-CCP negative. ESR 38mm/hr. CRP mildly elevated. HLA-B27 positive.",
+      "current_medications": "Topical corticosteroids for psoriasis",
+      "patient_age": 41,
+      "patient_sex": "male"
+    }
+  },
+  {
+    "id": "GIANT_CELL_ARTERITIS_001",
+    "difficulty": "hard",
+    "expected_primary": "Giant Cell Arteritis",
+    "acceptable": ["Temporal Arteritis", "GCA"],
+    "ground_truth_source": "2022 ACR/EULAR Classification Criteria for Giant Cell Arteritis",
+    "reference_answer": "New-onset headache, jaw claudication, scalp tenderness, and visual symptoms in a patient over 50 with markedly elevated ESR/CRP is a classic presentation of giant cell arteritis, a medical emergency due to risk of irreversible vision loss. Temporal artery biopsy is the diagnostic gold standard, but high-dose corticosteroids must be started immediately on clinical suspicion, without waiting for biopsy confirmation, to prevent blindness.",
+    "case": {
+      "symptoms": "71-year-old female with new severe temporal headache for 2 weeks, jaw pain when chewing that resolves with rest, and one episode of transient blurred vision in the left eye yesterday. Scalp tenderness on combing hair.",
+      "lab_results": "ESR 88mm/hr (markedly elevated). CRP 65mg/L. Hemoglobin mildly low at 11.2. Platelets elevated at 480,000.",
+      "current_medications": "Atorvastatin 20mg daily, Amlodipine 5mg daily",
+      "patient_age": 71,
+      "patient_sex": "female"
+    }
+  },
+  {
+    "id": "REACTIVE_ARTHRITIS_001",
+    "difficulty": "moderate",
+    "expected_primary": "Reactive Arthritis",
+    "acceptable": ["Reiter's Syndrome", "Post-infectious Arthritis"],
+    "ground_truth_source": "ASAS classification criteria for spondyloarthritis; classic triad described in reactive arthritis literature",
+    "reference_answer": "The triad of asymmetric oligoarthritis, conjunctivitis, and urethritis following a gastrointestinal or genitourinary infection is classic for reactive arthritis (formerly Reiter's syndrome), typically triggered by Chlamydia, Salmonella, Shigella, Campylobacter, or Yersinia. HLA-B27 positivity increases risk and severity. Treatment is primarily symptomatic with NSAIDs; the triggering infection should be treated if still active.",
+    "case": {
+      "symptoms": "27-year-old male with pain and swelling in the right knee and left ankle for 10 days, red and irritated eyes for 1 week, and burning during urination starting 3 weeks ago. Reports unprotected sexual contact 1 month prior.",
+      "lab_results": "HLA-B27 positive. ESR 42mm/hr. Urinalysis shows pyuria without bacteriuria. Chlamydia trachomatis PCR pending.",
+      "current_medications": "None",
+      "patient_age": 27,
+      "patient_sex": "male"
+    }
+  },
+  {
+    "id": "POLYMYALGIA_RHEUMATICA_001",
+    "difficulty": "moderate",
+    "expected_primary": "Polymyalgia Rheumatica",
+    "acceptable": ["PMR"],
+    "ground_truth_source": "2012 EULAR/ACR Provisional Classification Criteria for Polymyalgia Rheumatica",
+    "reference_answer": "Bilateral shoulder and hip girdle pain and stiffness, worse in the morning, in a patient over 50 with markedly elevated inflammatory markers and a dramatic response to low-dose corticosteroids, is characteristic of polymyalgia rheumatica. Normal CK distinguishes this from inflammatory myopathy. PMR has a known association with giant cell arteritis, and clinicians should screen for cranial symptoms.",
+    "case": {
+      "symptoms": "68-year-old female with bilateral shoulder and hip pain and stiffness for 6 weeks, worse in the morning and lasting over an hour, significant fatigue, and mild low-grade fevers. No headache or visual symptoms.",
+      "lab_results": "ESR 75mm/hr. CRP 48mg/L. CK normal. RF negative. ANA negative.",
+      "current_medications": "Levothyroxine 50mcg daily",
+      "patient_age": 68,
+      "patient_sex": "female"
+    }
+  },
+  {
+    "id": "ANKYLOSING_SPONDYLITIS_001",
+    "difficulty": "moderate",
+    "expected_primary": "Ankylosing Spondylitis",
+    "acceptable": ["Axial Spondyloarthritis"],
+    "ground_truth_source": "ASAS Classification Criteria for Axial Spondyloarthritis",
+    "reference_answer": "Chronic inflammatory back pain (onset before age 45, insidious onset, improvement with exercise, no improvement with rest, nocturnal pain) combined with HLA-B27 positivity and sacroiliitis on imaging meets ASAS criteria for axial spondyloarthritis. NSAIDs are first-line treatment; TNF inhibitors are used for NSAID-refractory disease.",
+    "case": {
+      "symptoms": "24-year-old male with chronic lower back pain for 8 months, worse in the morning and improving with movement throughout the day, with nighttime pain waking him up. No history of trauma.",
+      "lab_results": "HLA-B27 positive. ESR 32mm/hr. CRP mildly elevated. X-ray pending; clinical suspicion for sacroiliitis.",
+      "current_medications": "Ibuprofen 400mg as needed",
+      "patient_age": 24,
+      "patient_sex": "male"
+    }
+  },
+  {
+    "id": "VASCULITIS_GPA_001",
+    "difficulty": "hard",
+    "expected_primary": "Granulomatosis with Polyangiitis (GPA)",
+    "acceptable": ["Wegener's Granulomatosis", "ANCA-associated Vasculitis"],
+    "ground_truth_source": "2022 ACR/EULAR Classification Criteria for Granulomatosis with Polyangiitis",
+    "reference_answer": "Sinonasal symptoms (chronic sinusitis, nasal crusting), pulmonary involvement (nodules, hemoptysis), and renal involvement (hematuria, rising creatinine) with c-ANCA/PR3-ANCA positivity is the classic triad for granulomatosis with polyangiitis. This is a severe, multi-organ ANCA-associated vasculitis requiring urgent immunosuppression (typically rituximab or cyclophosphamide plus corticosteroids) to prevent permanent organ damage.",
+    "case": {
+      "symptoms": "45-year-old male with chronic sinusitis and nasal crusting for 4 months unresponsive to antibiotics, recent hemoptysis, and decreased urine output over the past week.",
+      "lab_results": "c-ANCA positive, PR3-ANCA positive at high titer. Creatinine elevated at 2.1 (baseline 0.9). Urinalysis shows hematuria and red cell casts. Chest CT shows bilateral nodules.",
+      "current_medications": "None",
+      "patient_age": 45,
+      "patient_sex": "male"
+    }
+  },
+  {
+    "id": "SCLERODERMA_001",
+    "difficulty": "moderate",
+    "expected_primary": "Systemic Sclerosis (Scleroderma)",
+    "acceptable": ["Systemic Sclerosis", "Limited Cutaneous Systemic Sclerosis"],
+    "ground_truth_source": "2013 ACR/EULAR Classification Criteria for Systemic Sclerosis",
+    "reference_answer": "Raynaud's phenomenon, skin thickening of the fingers, telangiectasias, and anti-centromere antibody positivity is consistent with limited cutaneous systemic sclerosis (formerly CREST syndrome). Patients require screening for pulmonary hypertension and esophageal dysmotility, as these are common and serious complications. Calcium channel blockers help manage Raynaud's; disease-modifying treatment depends on organ involvement.",
+    "case": {
+      "symptoms": "52-year-old female with fingers turning white then blue then red in cold weather for 2 years, progressive skin tightening over the fingers, and difficulty swallowing solid foods for 6 months.",
+      "lab_results": "Anti-centromere antibody positive. ANA positive at 1:640, speckled pattern. ESR mildly elevated.",
+      "current_medications": "None",
+      "patient_age": 52,
+      "patient_sex": "female"
+    }
+  },
+  {
+    "id": "DRUG_INDUCED_LUPUS_001",
+    "difficulty": "hard",
+    "expected_primary": "Drug-Induced Lupus Erythematosus",
+    "acceptable": ["Hydralazine-Induced Lupus"],
+    "ground_truth_source": "Drug-induced lupus diagnostic pattern: anti-histone antibody positivity, anti-dsDNA negativity, resolution after drug discontinuation",
+    "reference_answer": "Onset of lupus-like symptoms (arthralgia, fever, serositis) after starting hydralazine, with anti-histone antibody positivity but anti-dsDNA negativity and absence of renal or CNS involvement, is the classic pattern for drug-induced lupus. Unlike idiopathic SLE, drug-induced lupus typically resolves within weeks to months after discontinuing the offending medication, and does not require long-term immunosuppression.",
+    "case": {
+      "symptoms": "64-year-old female with joint pain in multiple joints, low-grade fever, and pleuritic chest pain for 3 weeks. Started a new blood pressure medication 4 months ago.",
+      "lab_results": "ANA positive at 1:320. Anti-histone antibody positive. Anti-dsDNA negative. C3/C4 normal. No proteinuria.",
+      "current_medications": "Hydralazine 50mg three times daily, Metoprolol 50mg twice daily",
+      "patient_age": 64,
+      "patient_sex": "female"
+    }
+  }
+]

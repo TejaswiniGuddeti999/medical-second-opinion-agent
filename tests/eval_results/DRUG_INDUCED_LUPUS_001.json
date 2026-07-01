@@ -1,0 +1,15 @@
+{
+  "case_id": "DRUG_INDUCED_LUPUS_001",
+  "difficulty": "hard",
+  "expected_primary": "Drug-Induced Lupus Erythematosus",
+  "acceptable": [
+    "Hydralazine-Induced Lupus"
+  ],
+  "elapsed_seconds": 14.61,
+  "error": "Analysis failed: SynthesisAgent failed: Missing agent outputs: ['research_output']",
+  "system_diagnosis": null,
+  "system_confidence": null,
+  "cosine_similarity": null,
+  "manual_match": "No",
+  "manual_notes": "Case crashed: Analysis failed: SynthesisAgent failed: Missing agent outputs: ['research_output']"
+}

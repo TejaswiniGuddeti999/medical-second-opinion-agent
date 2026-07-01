@@ -1,0 +1,40 @@
+{
+  "case_id": "REACTIVE_ARTHRITIS_001",
+  "difficulty": "moderate",
+  "expected_primary": "Reactive Arthritis",
+  "acceptable": [
+    "Reiter's Syndrome",
+    "Post-infectious Arthritis"
+  ],
+  "elapsed_seconds": 49.45,
+  "error": null,
+  "system_diagnosis": "Reactive Arthritis",
+  "system_confidence": 0.75,
+  "cosine_similarity": 0.516,
+  "immediate_actions": [
+    "Initiate antibiotic therapy if Chlamydia trachomatis PCR is positive"
+  ],
+  "differentials": [
+    {
+      "condition": "Gonococcal Arthritis",
+      "confidence": 0.5
+    },
+    {
+      "condition": "Ankylosing Spondylitis",
+      "confidence": 0.4
+    },
+    {
+      "condition": "Psoriatic Arthritis",
+      "confidence": 0.3
+    }
+  ],
+  "cited_pmids": [
+    "40473988",
+    "42373103",
+    "42200732",
+    "39311733",
+    "38579162"
+  ],
+  "manual_match": null,
+  "manual_notes": ""
+}

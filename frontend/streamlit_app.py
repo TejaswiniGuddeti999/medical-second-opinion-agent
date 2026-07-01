@@ -317,11 +317,19 @@ def main():
 
                         st.success(f"Analysis complete — case ID: {data['case_id']}")
 
-                        # Display the full report
-                        display_report(
-                            report=data['report'],
-                            processing_time=data.get('processing_time_seconds'),
-                        )
+                        if data.get("status") == "complete" and data.get("report"):
+                            st.success(f"Analysis complete — case ID: {data['case_id']}")
+                            display_report(
+                                report=data['report'],
+                                processing_time=data.get('processing_time_seconds'),
+                            )
+                        elif data.get("status") == "rejected":
+                            st.error(f"Case rejected: {data.get('error', 'Submission could not be processed.')}")
+                        elif data.get("status") == "insufficient_data":
+                            st.warning(data.get('error', 'Please provide more detail.'))
+                        else:
+                            st.error(f"Unexpected response status: {data.get('status')}")
+
 
                     except requests.exceptions.Timeout:
                         st.error(

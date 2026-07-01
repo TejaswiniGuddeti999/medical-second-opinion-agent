@@ -1,0 +1,42 @@
+{
+  "case_id": "RA_METHOTREXATE_001",
+  "difficulty": "moderate",
+  "expected_primary": "Methotrexate-induced Bone Marrow Suppression",
+  "acceptable": [
+    "Methotrexate Toxicity",
+    "Drug-Induced Pancytopenia"
+  ],
+  "elapsed_seconds": 51.32,
+  "error": null,
+  "system_diagnosis": "Methotrexate-induced myelosuppression",
+  "system_confidence": 0.75,
+  "cosine_similarity": 0.6227,
+  "immediate_actions": [
+    "Discontinue methotrexate and trimethoprim-sulfamethoxazole immediately",
+    "Evaluate methotrexate levels",
+    "Administer folinic acid (leucovorin) rescue therapy"
+  ],
+  "differentials": [
+    {
+      "condition": "Aplastic anemia",
+      "confidence": 0.5
+    },
+    {
+      "condition": "Vitamin B12 deficiency",
+      "confidence": 0.4
+    },
+    {
+      "condition": "Trimethoprim-sulfamethoxazole-induced myelosuppression",
+      "confidence": 0.35
+    }
+  ],
+  "cited_pmids": [
+    "37194235",
+    "42319474",
+    "40052724",
+    "39702189",
+    "38882583"
+  ],
+  "manual_match": null,
+  "manual_notes": ""
+}

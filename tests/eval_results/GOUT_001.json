@@ -1,0 +1,40 @@
+{
+  "case_id": "GOUT_001",
+  "difficulty": "easy",
+  "expected_primary": "Acute Gout Flare",
+  "acceptable": [
+    "Gouty Arthritis",
+    "Acute Gouty Monoarthritis"
+  ],
+  "elapsed_seconds": 35.81,
+  "error": null,
+  "system_diagnosis": "Gout",
+  "system_confidence": 0.85,
+  "cosine_similarity": 0.5775,
+  "immediate_actions": [
+    "Consider discontinuing hydrochlorothiazide and switching to an alternative antihypertensive that does not elevate uric acid levels."
+  ],
+  "differentials": [
+    {
+      "condition": "Pseudogout",
+      "confidence": 0.5
+    },
+    {
+      "condition": "Septic arthritis",
+      "confidence": 0.3
+    },
+    {
+      "condition": "Trauma-related arthritis",
+      "confidence": 0.25
+    }
+  ],
+  "cited_pmids": [
+    "41949339",
+    "39923577",
+    "41013934",
+    "39477067",
+    "39385411"
+  ],
+  "manual_match": null,
+  "manual_notes": ""
+}

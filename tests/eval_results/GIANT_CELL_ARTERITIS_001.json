@@ -1,0 +1,41 @@
+{
+  "case_id": "GIANT_CELL_ARTERITIS_001",
+  "difficulty": "hard",
+  "expected_primary": "Giant Cell Arteritis",
+  "acceptable": [
+    "Temporal Arteritis",
+    "GCA"
+  ],
+  "elapsed_seconds": 50.0,
+  "error": null,
+  "system_diagnosis": "Giant Cell Arteritis",
+  "system_confidence": 0.85,
+  "cosine_similarity": 0.5789,
+  "immediate_actions": [
+    "Initiate glucocorticoid therapy immediately to prevent vision loss",
+    "Evaluate liver function before continuing atorvastatin"
+  ],
+  "differentials": [
+    {
+      "condition": "Polymyalgia Rheumatica",
+      "confidence": 0.5
+    },
+    {
+      "condition": "Temporal Mandibular Joint Disorder",
+      "confidence": 0.3
+    },
+    {
+      "condition": "Migraine",
+      "confidence": 0.25
+    }
+  ],
+  "cited_pmids": [
+    "42114096",
+    "41566701",
+    "42234457",
+    "41818386",
+    "42330100"
+  ],
+  "manual_match": null,
+  "manual_notes": ""
+}

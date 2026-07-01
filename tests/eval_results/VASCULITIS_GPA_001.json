@@ -1,0 +1,16 @@
+{
+  "case_id": "VASCULITIS_GPA_001",
+  "difficulty": "hard",
+  "expected_primary": "Granulomatosis with Polyangiitis (GPA)",
+  "acceptable": [
+    "Wegener's Granulomatosis",
+    "ANCA-associated Vasculitis"
+  ],
+  "elapsed_seconds": 23.95,
+  "error": "Analysis failed: SynthesisAgent failed: Missing agent outputs: ['research_output']",
+  "system_diagnosis": null,
+  "system_confidence": null,
+  "cosine_similarity": null,
+  "manual_match": "No",
+  "manual_notes": "Case crashed: Analysis failed: SynthesisAgent failed: Missing agent outputs: ['research_output']"
+}

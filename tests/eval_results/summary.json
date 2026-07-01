@@ -1,0 +1,306 @@
+[
+  {
+    "case_id": "RA_METHOTREXATE_001",
+    "difficulty": "moderate",
+    "expected_primary": "Methotrexate-induced Bone Marrow Suppression",
+    "acceptable": [
+      "Methotrexate Toxicity",
+      "Drug-Induced Pancytopenia"
+    ],
+    "elapsed_seconds": 51.32,
+    "error": null,
+    "system_diagnosis": "Methotrexate-induced myelosuppression",
+    "system_confidence": 0.75,
+    "cosine_similarity": 0.6227,
+    "immediate_actions": [
+      "Discontinue methotrexate and trimethoprim-sulfamethoxazole immediately",
+      "Evaluate methotrexate levels",
+      "Administer folinic acid (leucovorin) rescue therapy"
+    ],
+    "differentials": [
+      {
+        "condition": "Aplastic anemia",
+        "confidence": 0.5
+      },
+      {
+        "condition": "Vitamin B12 deficiency",
+        "confidence": 0.4
+      },
+      {
+        "condition": "Trimethoprim-sulfamethoxazole-induced myelosuppression",
+        "confidence": 0.35
+      }
+    ],
+    "cited_pmids": [
+      "37194235",
+      "42319474",
+      "40052724",
+      "39702189",
+      "38882583"
+    ],
+    "manual_match": null,
+    "manual_notes": ""
+  },
+  {
+    "case_id": "GOUT_001",
+    "difficulty": "easy",
+    "expected_primary": "Acute Gout Flare",
+    "acceptable": [
+      "Gouty Arthritis",
+      "Acute Gouty Monoarthritis"
+    ],
+    "elapsed_seconds": 35.81,
+    "error": null,
+    "system_diagnosis": "Gout",
+    "system_confidence": 0.85,
+    "cosine_similarity": 0.5775,
+    "immediate_actions": [
+      "Consider discontinuing hydrochlorothiazide and switching to an alternative antihypertensive that does not elevate uric acid levels."
+    ],
+    "differentials": [
+      {
+        "condition": "Pseudogout",
+        "confidence": 0.5
+      },
+      {
+        "condition": "Septic arthritis",
+        "confidence": 0.3
+      },
+      {
+        "condition": "Trauma-related arthritis",
+        "confidence": 0.25
+      }
+    ],
+    "cited_pmids": [
+      "41949339",
+      "39923577",
+      "41013934",
+      "39477067",
+      "39385411"
+    ],
+    "manual_match": null,
+    "manual_notes": ""
+  },
+  {
+    "case_id": "PSORIATIC_ARTHRITIS_001",
+    "difficulty": "moderate",
+    "expected_primary": "Psoriatic Arthritis",
+    "acceptable": [
+      "PsA"
+    ],
+    "elapsed_seconds": 46.68,
+    "error": null,
+    "system_diagnosis": "Psoriatic Arthritis",
+    "system_confidence": 0.85,
+    "cosine_similarity": 0.5907,
+    "immediate_actions": [
+      "Consultation with a rheumatologist to discuss systemic treatment options"
+    ],
+    "differentials": [
+      {
+        "condition": "Rheumatoid Arthritis",
+        "confidence": 0.4
+      },
+      {
+        "condition": "Reactive Arthritis",
+        "confidence": 0.3
+      },
+      {
+        "condition": "Osteoarthritis",
+        "confidence": 0.25
+      }
+    ],
+    "cited_pmids": [
+      "42373103",
+      "42224925",
+      "42216248",
+      "41189198",
+      "42340794"
+    ],
+    "manual_match": null,
+    "manual_notes": ""
+  },
+  {
+    "case_id": "GIANT_CELL_ARTERITIS_001",
+    "difficulty": "hard",
+    "expected_primary": "Giant Cell Arteritis",
+    "acceptable": [
+      "Temporal Arteritis",
+      "GCA"
+    ],
+    "elapsed_seconds": 50.0,
+    "error": null,
+    "system_diagnosis": "Giant Cell Arteritis",
+    "system_confidence": 0.85,
+    "cosine_similarity": 0.5789,
+    "immediate_actions": [
+      "Initiate glucocorticoid therapy immediately to prevent vision loss",
+      "Evaluate liver function before continuing atorvastatin"
+    ],
+    "differentials": [
+      {
+        "condition": "Polymyalgia Rheumatica",
+        "confidence": 0.5
+      },
+      {
+        "condition": "Temporal Mandibular Joint Disorder",
+        "confidence": 0.3
+      },
+      {
+        "condition": "Migraine",
+        "confidence": 0.25
+      }
+    ],
+    "cited_pmids": [
+      "42114096",
+      "41566701",
+      "42234457",
+      "41818386",
+      "42330100"
+    ],
+    "manual_match": null,
+    "manual_notes": ""
+  },
+  {
+    "case_id": "REACTIVE_ARTHRITIS_001",
+    "difficulty": "moderate",
+    "expected_primary": "Reactive Arthritis",
+    "acceptable": [
+      "Reiter's Syndrome",
+      "Post-infectious Arthritis"
+    ],
+    "elapsed_seconds": 49.45,
+    "error": null,
+    "system_diagnosis": "Reactive Arthritis",
+    "system_confidence": 0.75,
+    "cosine_similarity": 0.516,
+    "immediate_actions": [
+      "Initiate antibiotic therapy if Chlamydia trachomatis PCR is positive"
+    ],
+    "differentials": [
+      {
+        "condition": "Gonococcal Arthritis",
+        "confidence": 0.5
+      },
+      {
+        "condition": "Ankylosing Spondylitis",
+        "confidence": 0.4
+      },
+      {
+        "condition": "Psoriatic Arthritis",
+        "confidence": 0.3
+      }
+    ],
+    "cited_pmids": [
+      "40473988",
+      "42373103",
+      "42200732",
+      "39311733",
+      "38579162"
+    ],
+    "manual_match": null,
+    "manual_notes": ""
+  },
+  {
+    "case_id": "POLYMYALGIA_RHEUMATICA_001",
+    "difficulty": "moderate",
+    "expected_primary": "Polymyalgia Rheumatica",
+    "acceptable": [
+      "PMR"
+    ],
+    "elapsed_seconds": 34.0,
+    "error": "Analysis failed: SynthesisAgent failed: Missing agent outputs: ['research_output']",
+    "system_diagnosis": null,
+    "system_confidence": null,
+    "cosine_similarity": null,
+    "manual_match": "No",
+    "manual_notes": "Case crashed: Analysis failed: SynthesisAgent failed: Missing agent outputs: ['research_output']"
+  },
+  {
+    "case_id": "ANKYLOSING_SPONDYLITIS_001",
+    "difficulty": "moderate",
+    "expected_primary": "Ankylosing Spondylitis",
+    "acceptable": [
+      "Axial Spondyloarthritis"
+    ],
+    "elapsed_seconds": 60.71,
+    "error": null,
+    "system_diagnosis": "Ankylosing Spondylitis",
+    "system_confidence": 0.75,
+    "cosine_similarity": 0.5589,
+    "immediate_actions": [
+      "Assess for history of aspirin allergy before continuing ibuprofen",
+      "Monitor for signs of stomach bleeding due to ibuprofen use"
+    ],
+    "differentials": [
+      {
+        "condition": "Mechanical Back Pain",
+        "confidence": 0.4
+      },
+      {
+        "condition": "Psoriatic Arthritis",
+        "confidence": 0.35
+      },
+      {
+        "condition": "Reactive Arthritis",
+        "confidence": 0.3
+      }
+    ],
+    "cited_pmids": [
+      "41105460",
+      "34615639",
+      "42262593",
+      "34294660",
+      "42200732"
+    ],
+    "manual_match": null,
+    "manual_notes": ""
+  },
+  {
+    "case_id": "VASCULITIS_GPA_001",
+    "difficulty": "hard",
+    "expected_primary": "Granulomatosis with Polyangiitis (GPA)",
+    "acceptable": [
+      "Wegener's Granulomatosis",
+      "ANCA-associated Vasculitis"
+    ],
+    "elapsed_seconds": 23.95,
+    "error": "Analysis failed: SynthesisAgent failed: Missing agent outputs: ['research_output']",
+    "system_diagnosis": null,
+    "system_confidence": null,
+    "cosine_similarity": null,
+    "manual_match": "No",
+    "manual_notes": "Case crashed: Analysis failed: SynthesisAgent failed: Missing agent outputs: ['research_output']"
+  },
+  {
+    "case_id": "SCLERODERMA_001",
+    "difficulty": "moderate",
+    "expected_primary": "Systemic Sclerosis (Scleroderma)",
+    "acceptable": [
+      "Systemic Sclerosis",
+      "Limited Cutaneous Systemic Sclerosis"
+    ],
+    "elapsed_seconds": 15.91,
+    "error": "Analysis failed: SynthesisAgent failed: Missing agent outputs: ['research_output']",
+    "system_diagnosis": null,
+    "system_confidence": null,
+    "cosine_similarity": null,
+    "manual_match": "No",
+    "manual_notes": "Case crashed: Analysis failed: SynthesisAgent failed: Missing agent outputs: ['research_output']"
+  },
+  {
+    "case_id": "DRUG_INDUCED_LUPUS_001",
+    "difficulty": "hard",
+    "expected_primary": "Drug-Induced Lupus Erythematosus",
+    "acceptable": [
+      "Hydralazine-Induced Lupus"
+    ],
+    "elapsed_seconds": 14.61,
+    "error": "Analysis failed: SynthesisAgent failed: Missing agent outputs: ['research_output']",
+    "system_diagnosis": null,
+    "system_confidence": null,
+    "cosine_similarity": null,
+    "manual_match": "No",
+    "manual_notes": "Case crashed: Analysis failed: SynthesisAgent failed: Missing agent outputs: ['research_output']"
+  }
+]

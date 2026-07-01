@@ -6,13 +6,16 @@ from app.schemas import (
     PatientCase,
     ResearchAgentOutput,
     SafetyAgentOutput,
+    DiagnosisCandidate,
     DiagnosisAgentOutput,
+    ConfidenceLevel,
     FinalReport,
 )
 from agents.research_agent import run_research_agent
 from agents.safety_agent import run_safety_agent
 from agents.diagnosis_agent import run_diagnosis_agent
 from agents.synthesis_agent import run_synthesis_agent
+from agents.input_validator import validate_clinical_input
 from app.logger import get_logger
 
 logger = get_logger(__name__)
@@ -43,7 +46,8 @@ async def research_node(state: AgentState) -> dict:
     """Runs ResearchAgent. Writes research_output into state."""
     try:
         logger.info("research_node_started")
-        result = await run_research_agent(state["case_summary"])
+        medications = state["case"].current_medications or ""
+        result = await run_research_agent(state["case_summary"], medications_text= medications)
         return {"research_output": result}
     except Exception as e:
         logger.error("research_node_failed", error=str(e))
@@ -199,6 +203,8 @@ Current medications: {case.current_medications or 'None reported'}
 Clinical history: {case.clinical_history or 'Not provided'}
 """.strip()
 
+    
+
     # Initial state
     initial_state: AgentState = {
         "case": case,
@@ -209,6 +215,25 @@ Clinical history: {case.clinical_history or 'Not provided'}
         "final_report": None,
         "error": None,
     }
+
+    validation = await validate_clinical_input(case_summary)
+    if not validation.get("is_valid_clinical_case", True):
+        logger.warning("invalid_input_detected", reason=validation.get("reason"))
+        return FinalReport(
+            primary_diagnosis="Invalid submission",
+            confidence=0.0,
+            confidence_level=ConfidenceLevel.LOW,
+            research_output=ResearchAgentOutput(articles=[], research_summary="N/A", agent_position="N/A"),
+            safety_output=SafetyAgentOutput(safety_summary="N/A", is_safe_to_proceed=False, agent_position="N/A"),
+            diagnosis_output=DiagnosisAgentOutput(
+                primary_diagnosis=DiagnosisCandidate(condition="Invalid submission", confidence=0.0, confidence_level=ConfidenceLevel.LOW, supporting_evidence=[], against_evidence=[]),
+                differential_diagnoses=[], reasoning="N/A", agent_position="N/A"
+            ),
+            immediate_actions=["This submission does not appear to contain valid clinical information and could not be processed."],
+            further_investigations=[],
+            red_flags=[],
+            disclaimer="This submission was flagged as not containing genuine clinical information.",
+        )
 
     # Run the graph
     final_state = await medical_graph.ainvoke(initial_state)

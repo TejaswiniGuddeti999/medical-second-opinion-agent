@@ -1,5 +1,6 @@
 import time 
 import uuid
+import re
 from fastapi import APIRouter, HTTPException, UploadFile, File, Depends
 from sqlalchemy.ext.asyncio import AsyncSession
 from app.schemas import PatientCase, AnalysisResponse, HealthCheck
@@ -8,10 +9,57 @@ from app.logger import get_logger
 from agents.orchestrator import run_analysis
 from db.database import get_db
 from db import crud
+from openai import AsyncOpenAI
+
+
 
 logger = get_logger(__name__)
 settings = get_settings()
 router = APIRouter()
+moderation_client = AsyncOpenAI(api_key = settings.openai_api_key)
+
+
+INJECTION_PATTERNS = [
+    r"ignore (all |everything|previous|prior|above)",
+    r"forget (everything|all|previous)",
+    r"disregard (your|the|all)",
+    r"you are now",
+    r"new instructions",
+    r"act as if",
+    r"system prompt",
+]
+
+HARM_INTENT_PATTERNS = [
+    r"how to (kill|harm|hurt|poison|injure)",
+    r"how (do i|can i) (kill|harm|hurt|poison)",
+    r"(lethal|fatal) dose",
+    r"undetectable (poison|method)",
+]
+
+def looks_like_injection(text: str) -> bool:
+    return any(re.search(p, text, re.IGNORECASE) for p in INJECTION_PATTERNS)
+
+def looks_like_harmful_intent(text: str) -> bool:
+    return any(re.search(p, text, re.IGNORECASE) for p in HARM_INTENT_PATTERNS)
+    
+
+async def check_moderation(text: str) -> bool:
+    """Returns True if flagged by OpenAI's default threshold OR our own stricter violence threshold."""
+    try:
+        response = await moderation_client.moderations.create(input=text)
+        result = response.results[0]
+        violence_score = result.category_scores.violence
+
+        logger.info(
+            "moderation_result",
+            flagged=result.flagged,
+            violence_score=violence_score,
+        )
+
+        return result.flagged or violence_score > 0.5
+    except Exception as e:
+        logger.error("moderation_check_failed", error=str(e))
+        return False
 
 @router.get("/health", response_model=HealthCheck)
 async def health_check():
@@ -43,13 +91,40 @@ async def analyze_case(
             status="insufficient_data",
             error="Please provide more detailed symptoms for a meaningful analysis. Minimum 20 characters required.",
         )
+    # Check 1 — injection pre-screen (cheap, instant, no API call)
+    if looks_like_injection(case.symptoms):
+        logger.warning("injection_pattern_detected", case_id=case_id)
+        return AnalysisResponse(
+            case_id=case_id,
+            status="rejected",
+            error="The submitted case description does not appear to contain valid clinical information. Please describe actual patient symptoms.",
+        )
+
+    # Check 2 — harmful-intent pre-screen (cheap, instant, no API call)
+    if looks_like_harmful_intent(case.symptoms):
+        logger.warning("harmful_intent_detected", case_id=case_id)
+        return AnalysisResponse(
+            case_id=case_id,
+            status="rejected",
+            error="This submission cannot be processed.",
+        )
+
+    # Check 3 — Moderation API (costs a network call, runs last since the
+    # two checks above are free and catch the most obvious cases first)
+    is_flagged = await check_moderation(case.symptoms)
+    if is_flagged:
+        logger.warning("moderation_flagged", case_id=case_id)
+        return AnalysisResponse(
+            case_id=case_id,
+            status="rejected",
+            error="The submitted content could not be processed. Please ensure your submission contains only clinical case information.",
+        )
     start = time.time()
 
     logger.info("analysis_request_received", case_id = case_id)
 
     try:
         await crud.save_case(db, case_id = case_id , case = case)
-
         report = await run_analysis(case)
 
         elapsed = round(time.time() - start, 2)

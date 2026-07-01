@@ -1,0 +1,40 @@
+{
+  "case_id": "ANKYLOSING_SPONDYLITIS_001",
+  "difficulty": "moderate",
+  "expected_primary": "Ankylosing Spondylitis",
+  "acceptable": [
+    "Axial Spondyloarthritis"
+  ],
+  "elapsed_seconds": 60.71,
+  "error": null,
+  "system_diagnosis": "Ankylosing Spondylitis",
+  "system_confidence": 0.75,
+  "cosine_similarity": 0.5589,
+  "immediate_actions": [
+    "Assess for history of aspirin allergy before continuing ibuprofen",
+    "Monitor for signs of stomach bleeding due to ibuprofen use"
+  ],
+  "differentials": [
+    {
+      "condition": "Mechanical Back Pain",
+      "confidence": 0.4
+    },
+    {
+      "condition": "Psoriatic Arthritis",
+      "confidence": 0.35
+    },
+    {
+      "condition": "Reactive Arthritis",
+      "confidence": 0.3
+    }
+  ],
+  "cited_pmids": [
+    "41105460",
+    "34615639",
+    "42262593",
+    "34294660",
+    "42200732"
+  ],
+  "manual_match": null,
+  "manual_notes": ""
+}

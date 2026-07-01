@@ -1,0 +1,39 @@
+{
+  "case_id": "PSORIATIC_ARTHRITIS_001",
+  "difficulty": "moderate",
+  "expected_primary": "Psoriatic Arthritis",
+  "acceptable": [
+    "PsA"
+  ],
+  "elapsed_seconds": 46.68,
+  "error": null,
+  "system_diagnosis": "Psoriatic Arthritis",
+  "system_confidence": 0.85,
+  "cosine_similarity": 0.5907,
+  "immediate_actions": [
+    "Consultation with a rheumatologist to discuss systemic treatment options"
+  ],
+  "differentials": [
+    {
+      "condition": "Rheumatoid Arthritis",
+      "confidence": 0.4
+    },
+    {
+      "condition": "Reactive Arthritis",
+      "confidence": 0.3
+    },
+    {
+      "condition": "Osteoarthritis",
+      "confidence": 0.25
+    }
+  ],
+  "cited_pmids": [
+    "42373103",
+    "42224925",
+    "42216248",
+    "41189198",
+    "42340794"
+  ],
+  "manual_match": null,
+  "manual_notes": ""
+}

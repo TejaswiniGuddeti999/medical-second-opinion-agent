@@ -1,0 +1,16 @@
+{
+  "case_id": "SCLERODERMA_001",
+  "difficulty": "moderate",
+  "expected_primary": "Systemic Sclerosis (Scleroderma)",
+  "acceptable": [
+    "Systemic Sclerosis",
+    "Limited Cutaneous Systemic Sclerosis"
+  ],
+  "elapsed_seconds": 15.91,
+  "error": "Analysis failed: SynthesisAgent failed: Missing agent outputs: ['research_output']",
+  "system_diagnosis": null,
+  "system_confidence": null,
+  "cosine_similarity": null,
+  "manual_match": "No",
+  "manual_notes": "Case crashed: Analysis failed: SynthesisAgent failed: Missing agent outputs: ['research_output']"
+}
