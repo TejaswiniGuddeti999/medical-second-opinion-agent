@@ -179,10 +179,4 @@ uvicorn app.main:app --reload
 streamlit run frontend/streamlit_app.py
 ```
 
----
 
-## Built by
-
-Tejaswini Guddeti - SAP CPI consultant building AI projects beyond core consulting work.
-
-This project was built as a portfolio piece targeting early-stage health-tech founders. If you're building in diagnostic AI and want to talk, reach out on LinkedIn.
