@@ -3,8 +3,9 @@ from functools import lru_cache
 
 class Settings(BaseSettings):
     # LLM
-    openai_api_key:str
+    openai_api_key: str
     openai_model: str = "gpt-4o"
+    api_key: str = "changeme"
 
     # External APIs
     ncbi_api_key: str

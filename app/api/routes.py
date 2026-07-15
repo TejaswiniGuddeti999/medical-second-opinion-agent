@@ -1,7 +1,7 @@
 import time 
 import uuid
 import re
-from fastapi import APIRouter, HTTPException, UploadFile, File, Depends
+from fastapi import APIRouter, HTTPException, UploadFile, File, Depends, Header
 from sqlalchemy.ext.asyncio import AsyncSession
 from app.schemas import PatientCase, AnalysisResponse, HealthCheck
 from app.config import get_settings
@@ -16,6 +16,11 @@ from openai import AsyncOpenAI
 logger = get_logger(__name__)
 settings = get_settings()
 router = APIRouter()
+
+async def verify_api_key(x_api_key: str = Header(...)):
+    if x_api_key != settings.api_key:
+        raise HTTPException(status_code=401, detail="Invalid API key")
+
 moderation_client = AsyncOpenAI(api_key = settings.openai_api_key)
 
 
@@ -147,10 +152,10 @@ async def analyze_case(
 
     except Exception as e:
         logger.error("analyze_request_failed", case_id=case_id, error=str(e))
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail="Analysis failed. Please try again.")
 
 
-@router.get("/cases", response_model=list[AnalysisResponse])
+@router.get("/cases", response_model=list[AnalysisResponse],dependencies=[Depends(verify_api_key)])
 async def list_cases(
     limit:int = 10,
     db: AsyncSession = Depends(get_db),
@@ -162,7 +167,7 @@ async def list_cases(
     cases = await crud.get_recent_cases(db, limit=limit)
     return cases
 
-@router.get("/cases/{case_id}", response_model =AnalysisResponse)  
+@router.get("/cases/{case_id}", response_model =AnalysisResponse , dependencies=[Depends(verify_api_key)])  
 async def get_case(
     case_id: str,
     db: AsyncSession = Depends(get_db),

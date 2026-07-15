@@ -347,7 +347,10 @@ def main():
             st.rerun()
 
         try:
-            response = requests.get(f"{API_URL}/cases", timeout=10)
+            response = requests.get(f"{API_URL}/cases", 
+                                headers={"X-API-Key": os.getenv("API_KEY", "")},
+                                timeout=10,
+                            )
             response.raise_for_status()
             cases = response.json()
 
