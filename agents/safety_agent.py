@@ -70,7 +70,7 @@ def extract_medications(medications_text: str) -> list[str]:
     drugs = []
     for item in raw:
         # Remove dosage numbers and units
-        clean = re.sub(r'\d+\.?\d*\s*(mg|mcg|ml|g|units?)\b.*', '', item, flags=re.IGNORECASE)
+        clean = re.sub(r'\s+\d+.*', '', item, flags=re.IGNORECASE)
         # Remove frequency and form words
         clean = re.sub(r'\b(once|twice|daily|morning|evening|oral|tablet|capsule|extended|release|er|xr)\b', '', clean, flags=re.IGNORECASE)
         clean = clean.strip()
