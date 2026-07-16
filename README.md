@@ -1,8 +1,8 @@
 # Medical Second Opinion Agent
 
-Live Demo: medical-second-opinion-agent.up.railway.app
-Loom Walkthrough: Watch the demo
-GitHub: TejaswiniGuddeti999/medical-second-opinion-agent
+**Live Demo:** [medical-second-opinion-agent.up.railway.app](https://medical-second-opinion-agent.up.railway.app/)
+**Loom Walkthrough:** [Watch the demo](https://www.loom.com/share/4fed98fdd310444390e183cf42262843)
+**GitHub:** [TejaswiniGuddeti999/medical-second-opinion-agent](https://github.com/TejaswiniGuddeti999/medical-second-opinion-agent)
 
 A multi-agent AI system that generates structured second opinions for rheumatology and autoimmune cases, grounded in real PubMed literature and FDA drug safety data.
 
@@ -180,5 +180,3 @@ uvicorn app.main:app --reload
 # Start frontend (separate terminal)
 streamlit run frontend/streamlit_app.py
 ```
-
-
