@@ -1,5 +1,4 @@
 import json
-from openai import AsyncOpenAI
 from app.config import get_settings
 from app.schemas import (
     FinalReport,
@@ -16,7 +15,7 @@ from app.cost_utils import calculate_cost
 
 logger = get_logger(__name__)
 settings = get_settings()
-client = AsyncOpenAI(api_key=settings.openai_api_key)
+from app.llm import client, MODEL
 
 
 def confidence_to_level(score: float) -> ConfidenceLevel:
@@ -173,7 +172,7 @@ Differential diagnoses:
     Return ONLY the JSON. No preamble, no markdown fences."""
 
     response = await client.chat.completions.create(
-        model=settings.openai_model,
+        model=MODEL,
         messages=[{"role": "user", "content": prompt}],
         temperature=0.2,   # lowest temp — final report must be consistent
         response_format={"type": "json_object"},

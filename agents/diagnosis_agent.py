@@ -1,6 +1,5 @@
 import json
 import asyncio
-from openai import AsyncOpenAI
 from app.config import get_settings
 from app.schemas import (
     DiagnosisAgentOutput,
@@ -13,7 +12,7 @@ from app.cost_utils import calculate_cost
 
 logger = get_logger(__name__)
 settings = get_settings()
-client = AsyncOpenAI(api_key=settings.openai_api_key)
+from app.llm import client, MODEL
 
 
 def confidence_to_level(score: float) -> ConfidenceLevel:
@@ -164,7 +163,7 @@ Return ONLY valid JSON.
 """
 
     response = await client.chat.completions.create(
-        model=settings.openai_model,
+        model=MODEL,
         messages=[{"role": "user", "content": prompt}],
         temperature=0.3,
         response_format={"type": "json_object"},

@@ -3,8 +3,11 @@ from functools import lru_cache
 
 class Settings(BaseSettings):
     # LLM
-    openai_api_key: str
-    openai_model: str = "gpt-4o"
+    openai_api_key:str
+    openai_model:str="gpt-4o"
+    groq_api_key: str
+    groq_model: str = "openai/gpt-oss-120b"
+    groq_base_url: str = "https://api.groq.com/openai/v1"
     api_key: str = "changeme"
 
     # External APIs

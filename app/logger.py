@@ -1,6 +1,11 @@
+import sys
 import structlog
 import logging
 from app.config import get_settings
+
+# Windows defaults to cp1252 when output is redirected; LLMs emit characters
+# like '‑' (non-breaking hyphen) that crash a log call. Force UTF-8.
+sys.stdout.reconfigure(encoding="utf-8", errors="replace")
 
 settings = get_settings()
 

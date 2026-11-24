@@ -11,12 +11,11 @@ from app.schemas import (
     EvidenceQuality,
 )
 from app.logger import get_logger
-from openai import AsyncOpenAI
 from app.cost_utils import calculate_cost
 
 logger = get_logger(__name__)
 settings = get_settings()
-client = AsyncOpenAI(api_key=settings.openai_api_key)
+from app.llm import client, MODEL
 
 
 # clean medications so that we can generate queries using them
@@ -340,10 +339,11 @@ async def score_article_relevance(
 
             try:
                 response = await client.chat.completions.create(
-                    model=settings.openai_model,
+                    model=MODEL,
                     messages=[{"role": "user", "content": prompt}],
                     temperature=0,
                     response_format={"type": "json_object"},
+                    reasoning_effort="low",  # gpt-oss hidden "thinking" tokens count toward the 8K/min limit
                 )
 
                 usage = response.usage
@@ -496,7 +496,7 @@ async def analyze_articles_with_llm(
     Return ONLY the JSON. No preamble, no markdown fences."""
 
     response = await client.chat.completions.create(
-        model=settings.openai_model,
+        model=MODEL,
         messages=[{"role": "user", "content": prompt}],
         temperature=0.3,
         response_format={"type": "json_object"},
@@ -635,7 +635,7 @@ async def run_research_agent(case_summary: str , medications_text: str = "") -> 
     """
 
     query_response = await client.chat.completions.create(
-        model=settings.openai_model,
+        model=MODEL,
         messages=[{"role": "user", "content": query_prompt}],
         temperature=0.4,   # slightly higher — we want diverse queries
         response_format={"type": "json_object"},
@@ -704,7 +704,7 @@ async def run_research_agent(case_summary: str , medications_text: str = "") -> 
     # Fetch details only if we have PMIDs
     articles = []
     if unique_pmids:
-        articles = await fetch_pubmed_details(unique_pmids[:15])
+        articles = await fetch_pubmed_details(unique_pmids[:8])
         logger.info(
             "full_candidate_pool",
             pool=[
