@@ -48,6 +48,21 @@ def find_relevant_text(label_text: str, other_drugs: list[str]) -> str:
     return ".".join(relevant)[:800]
 
 
+def get_sections(result: dict, names: list[str]) -> str:
+    """
+    FDA labels come in 3 formats with different section names
+    (old prescription, new prescription, over-the-counter).
+    Collect the text of every section in `names` that this label has.
+    Order matters: put the most important section first, so it
+    survives when the text is cut to a length limit later.
+    """
+    parts = []
+    for name in names:
+        if result.get(name):
+            parts.append(result[name][0])
+    return " ".join(parts)
+
+
 # FIXED — retry wraps only the single drug call
 @retry(stop=stop_after_attempt(3), wait=wait_exponential(min=1, max=10))
 async def fetch_single_drug(http: httpx.AsyncClient, drug: str, other_drugs: list[str]) -> dict | None:
@@ -66,12 +81,15 @@ async def fetch_single_drug(http: httpx.AsyncClient, drug: str, other_drugs: lis
     data = response.json()
     if data.get("results"):
         result = data["results"][0]
+        # Each field lists the section names used by all 3 label formats,
+        # most important first.
+        interactions_text = get_sections(result, ["drug_interactions", "ask_doctor_or_pharmacist", "ask_doctor"])
         return {
             "drug": drug,
-            "warnings": result.get("warnings", [""])[0][:500] if result.get("warnings") else "",
-            "contraindications": result.get("contraindications", [""])[0][:500] if result.get("contraindications") else "",
-            "drug_interactions": find_relevant_text(result["drug_interactions"][0], other_drugs) if result.get("drug_interactions") else "",
-            "precautions": result.get("precautions", [""])[0][:500] if result.get("precautions") else "",
+            "warnings": get_sections(result, ["boxed_warning", "warnings", "warnings_and_cautions"])[:700],
+            "contraindications": get_sections(result, ["contraindications", "do_not_use"])[:500],
+            "drug_interactions": find_relevant_text(interactions_text, other_drugs) if interactions_text else "",
+            "precautions": get_sections(result, ["precautions", "when_using", "stop_use"])[:500],
         }
     return None
 
