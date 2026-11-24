@@ -89,7 +89,9 @@ async def fetch_single_drug(http: httpx.AsyncClient, drug: str, other_drugs: lis
             "warnings": get_sections(result, ["boxed_warning", "warnings", "warnings_and_cautions"])[:700],
             "contraindications": get_sections(result, ["contraindications", "do_not_use"])[:500],
             "drug_interactions": find_relevant_text(interactions_text, other_drugs) if interactions_text else "",
-            "precautions": get_sections(result, ["precautions", "when_using", "stop_use"])[:500],
+            # the func runs to fetch drug_interactions where other_drugs and it's class (if present) are searched in text and only those
+            # parts become relevant else first 500 [:500]
+            "precautions": get_sections(result, ["precautions", "general_precautions", "when_using", "stop_use"])[:500],
         }
     return None
 
@@ -104,6 +106,7 @@ async def fetch_drug_interactions(medications: list[str]) -> list[dict]:
         tasks = [
             fetch_single_drug(http, drug, [m for m in medications if m != drug])
             for drug in medications
+            #  a parameter "other_drugs" means all other drugs except itself to search for clear interactions
         ]
         results = await asyncio.gather(*tasks, return_exceptions=True)
 
@@ -277,13 +280,15 @@ async def run_safety_agent(case_summary: str, medications_text: str = "") -> Saf
     logger.info("safety_agent_started")
 
     medications = extract_medications(medications_text) if medications_text else []
-    # unnecessary text is removed
+    # unnecessary text is removed like mg, empty values, etc..
     
     logger.info("medications_extracted", count=len(medications), drugs=medications)
 
     # await says pause this function and give control back to the event loop until this one thing finishes
     # It is about freezing the entire server while one request is waiting for an external API
     fda_data = await fetch_drug_interactions(medications)
+    # Each single drug interaction is run parlallely accross all medicines and returned
+
 
     result = await analyze_safety_with_llm(case_summary, medications, fda_data)
     logger.info(
